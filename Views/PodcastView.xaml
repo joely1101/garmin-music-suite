@@ -134,8 +134,7 @@
                                                            VerticalAlignment="Center" Margin="0,0,8,0"/>
                                                 <Button Style="{StaticResource FlatButton}" Content="下載 MP3" Padding="10,5"
                                                         Command="{Binding DataContext.DownloadEpisodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                        CommandParameter="{Binding}"
-                                                        IsEnabled="{Binding IsDownloading, Converter={x:Null}}"/>
+                                                        CommandParameter="{Binding}"/>
                                             </StackPanel>
                                         </Grid>
                                     </Border>

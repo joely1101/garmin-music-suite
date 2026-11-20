@@ -10,6 +10,43 @@
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BrushBgDark}">
 
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Navigation Radio Button Style -->
+        <Style x:Key="NavRadioButton" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,0">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{StaticResource BrushPrimaryOrange}"/>
+                                <Setter Property="Foreground" Value="#ffffff"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsChecked" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="bd" Property="Background" Value="#1f1f1f"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="240"/>
@@ -39,128 +76,28 @@
                 <!-- 2. Main Navigation Menu -->
                 <StackPanel Grid.Row="1" Margin="12,0,12,20">
                     <!-- Tab 0: Watch Sync -->
-                    <RadioButton Content="  ⌚  手錶同步管理" Height="40" Margin="0,0,0,4"
-                                 IsChecked="{Binding SelectedTabIndex, Converter={x:Null}}"
-                                 Command="{Binding SelectTabCommand}" CommandParameter="0">
-                        <RadioButton.Style>
-                            <Style TargetType="RadioButton">
-                                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
-                                <Setter Property="FontSize" Value="13"/>
-                                <Setter Property="FontWeight" Value="Medium"/>
-                                <Setter Property="Cursor" Value="Hand"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="RadioButton">
-                                            <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,0">
-                                                <ContentPresenter VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="0">
-                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource BrushPrimaryOrange}"/>
-                                                    <Setter Property="Foreground" Value="#ffffff"/>
-                                                    <Setter Property="FontWeight" Value="SemiBold"/>
-                                                </DataTrigger>
-                                                <MultiDataTrigger>
-                                                    <MultiDataTrigger.Conditions>
-                                                        <Condition Binding="{Binding Path=IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
-                                                        <Condition Binding="{Binding SelectedTabIndex}" Value="1"/>
-                                                    </MultiDataTrigger.Conditions>
-                                                    <Setter TargetName="bd" Property="Background" Value="#1f1f1f"/>
-                                                </MultiDataTrigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </RadioButton.Style>
-                    </RadioButton>
+                    <RadioButton Style="{StaticResource NavRadioButton}"
+                                 Content="  ⌚  手錶同步管理"
+                                 IsChecked="{Binding IsWatchSyncTab, Mode=OneWay}"
+                                 Command="{Binding SelectTabCommand}" CommandParameter="0"/>
 
                     <!-- Tab 1: YouTube Downloader -->
-                    <RadioButton Content="  📥  YouTube 音樂下載" Height="40" Margin="0,0,0,4"
-                                 Command="{Binding SelectTabCommand}" CommandParameter="1">
-                        <RadioButton.Style>
-                            <Style TargetType="RadioButton">
-                                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
-                                <Setter Property="FontSize" Value="13"/>
-                                <Setter Property="FontWeight" Value="Medium"/>
-                                <Setter Property="Cursor" Value="Hand"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="RadioButton">
-                                            <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,0">
-                                                <ContentPresenter VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
-                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource BrushPrimaryOrange}"/>
-                                                    <Setter Property="Foreground" Value="#ffffff"/>
-                                                    <Setter Property="FontWeight" Value="SemiBold"/>
-                                                </DataTrigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </RadioButton.Style>
-                    </RadioButton>
+                    <RadioButton Style="{StaticResource NavRadioButton}"
+                                 Content="  📥  YouTube 音樂下載"
+                                 IsChecked="{Binding IsYouTubeTab, Mode=OneWay}"
+                                 Command="{Binding SelectTabCommand}" CommandParameter="1"/>
 
                     <!-- Tab 2: Podcast -->
-                    <RadioButton Content="  🎙️  Podcast 下載" Height="40" Margin="0,0,0,4"
-                                 Command="{Binding SelectTabCommand}" CommandParameter="2">
-                        <RadioButton.Style>
-                            <Style TargetType="RadioButton">
-                                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
-                                <Setter Property="FontSize" Value="13"/>
-                                <Setter Property="FontWeight" Value="Medium"/>
-                                <Setter Property="Cursor" Value="Hand"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="RadioButton">
-                                            <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,0">
-                                                <ContentPresenter VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="2">
-                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource BrushPrimaryOrange}"/>
-                                                    <Setter Property="Foreground" Value="#ffffff"/>
-                                                    <Setter Property="FontWeight" Value="SemiBold"/>
-                                                </DataTrigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </RadioButton.Style>
-                    </RadioButton>
+                    <RadioButton Style="{StaticResource NavRadioButton}"
+                                 Content="  🎙️  Podcast 下載"
+                                 IsChecked="{Binding IsPodcastTab, Mode=OneWay}"
+                                 Command="{Binding SelectTabCommand}" CommandParameter="2"/>
 
                     <!-- Tab 3: Settings -->
-                    <RadioButton Content="  ⚙️  手錶路徑與設定" Height="40"
-                                 Command="{Binding SelectTabCommand}" CommandParameter="3">
-                        <RadioButton.Style>
-                            <Style TargetType="RadioButton">
-                                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
-                                <Setter Property="FontSize" Value="13"/>
-                                <Setter Property="FontWeight" Value="Medium"/>
-                                <Setter Property="Cursor" Value="Hand"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="RadioButton">
-                                            <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,0">
-                                                <ContentPresenter VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
-                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource BrushPrimaryOrange}"/>
-                                                    <Setter Property="Foreground" Value="#ffffff"/>
-                                                    <Setter Property="FontWeight" Value="SemiBold"/>
-                                                </DataTrigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </RadioButton.Style>
-                    </RadioButton>
+                    <RadioButton Style="{StaticResource NavRadioButton}"
+                                 Content="  ⚙️  手錶路徑與設定"
+                                 IsChecked="{Binding IsSettingsTab, Mode=OneWay}"
+                                 Command="{Binding SelectTabCommand}" CommandParameter="3"/>
                 </StackPanel>
 
                 <!-- 3. Computer Folder Library Tree -->
@@ -265,7 +202,7 @@
                         </Border>
 
                         <Button Style="{StaticResource FlatButton}" Content="重新整理" Padding="10,5"
-                                Command="{Binding RefreshWatchCommand}" IsEnabled="{Binding IsRefreshingWatch, Converter={x:Null}}"/>
+                                Command="{Binding RefreshWatchCommand}"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -273,60 +210,20 @@
             <!-- Active View Content -->
             <Grid Grid.Row="1" Margin="24">
                 <!-- View 0: Watch Sync -->
-                <views:WatchSyncView DataContext="{Binding WatchSyncVM}">
-                    <views:WatchSyncView.Style>
-                        <Style TargetType="views:WatchSyncView">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="0">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </views:WatchSyncView.Style>
-                </views:WatchSyncView>
+                <views:WatchSyncView DataContext="{Binding WatchSyncVM}"
+                                     Visibility="{Binding DataContext.IsWatchSyncTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}"/>
 
                 <!-- View 1: YouTube Downloader -->
-                <views:YouTubeDownloadView DataContext="{Binding YouTubeVM}">
-                    <views:YouTubeDownloadView.Style>
-                        <Style TargetType="views:YouTubeDownloadView">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </views:YouTubeDownloadView.Style>
-                </views:YouTubeDownloadView>
+                <views:YouTubeDownloadView DataContext="{Binding YouTubeVM}"
+                                           Visibility="{Binding DataContext.IsYouTubeTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}"/>
 
                 <!-- View 2: Podcast -->
-                <views:PodcastView DataContext="{Binding PodcastVM}">
-                    <views:PodcastView.Style>
-                        <Style TargetType="views:PodcastView">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="2">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </views:PodcastView.Style>
-                </views:PodcastView>
+                <views:PodcastView DataContext="{Binding PodcastVM}"
+                                   Visibility="{Binding DataContext.IsPodcastTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}"/>
 
                 <!-- View 3: Settings -->
-                <views:SettingsView DataContext="{Binding SettingsVM}">
-                    <views:SettingsView.Style>
-                        <Style TargetType="views:SettingsView">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </views:SettingsView.Style>
-                </views:SettingsView>
+                <views:SettingsView DataContext="{Binding SettingsVM}"
+                                    Visibility="{Binding DataContext.IsSettingsTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}"/>
             </Grid>
         </Grid>
     </Grid>

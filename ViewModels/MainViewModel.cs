@@ -23,8 +23,22 @@ public class MainViewModel : ViewModelBase
     public int SelectedTabIndex
     {
         get => _selectedTabIndex;
-        set => SetField(ref _selectedTabIndex, value);
+        set
+        {
+            if (SetField(ref _selectedTabIndex, value))
+            {
+                OnPropertyChanged(nameof(IsWatchSyncTab));
+                OnPropertyChanged(nameof(IsYouTubeTab));
+                OnPropertyChanged(nameof(IsPodcastTab));
+                OnPropertyChanged(nameof(IsSettingsTab));
+            }
+        }
     }
+
+    public bool IsWatchSyncTab => SelectedTabIndex == 0;
+    public bool IsYouTubeTab => SelectedTabIndex == 1;
+    public bool IsPodcastTab => SelectedTabIndex == 2;
+    public bool IsSettingsTab => SelectedTabIndex == 3;
 
     public WatchDevice Watch
     {

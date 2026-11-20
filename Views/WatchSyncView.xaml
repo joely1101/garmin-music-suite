@@ -117,7 +117,7 @@
                                 Command="{Binding CreatePlaylistCommand}"/>
 
                         <Button Grid.Column="2" Style="{StaticResource OrangeButton}" Content="一鍵同步勾選歌曲至手錶" 
-                                Command="{Binding SyncSelectedCommand}" IsEnabled="{Binding IsSyncing, Converter={x:Null}}"/>
+                                Command="{Binding SyncSelectedCommand}"/>
                     </Grid>
                 </Border>
             </Grid>
