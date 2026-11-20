@@ -59,7 +59,11 @@ public class WatchDevice : INotifyPropertyChanged
         }
     }
 
-    public long UsedBytes => Math.Max(0, TotalBytes - FreeBytes);
+    public long UsedBytes
+    {
+        get => Math.Max(0, TotalBytes - FreeBytes);
+        set { }
+    }
 
     public double UsedPercentage
     {
@@ -68,6 +72,7 @@ public class WatchDevice : INotifyPropertyChanged
             if (TotalBytes <= 0) return 0;
             return (double)UsedBytes / TotalBytes * 100.0;
         }
+        set { }
     }
 
     public bool IsConnected

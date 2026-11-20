@@ -18,6 +18,7 @@ public class AudioPlayerService : ViewModelBase
 
     private readonly MediaPlayer _mediaPlayer = new();
     private readonly DispatcherTimer _timer;
+    private bool _isUpdatingFromTimer;
     private Track? _currentTrack;
     private bool _isPlaying;
     private double _currentPositionSeconds;
@@ -66,6 +67,10 @@ public class AudioPlayerService : ViewModelBase
         {
             if (SetField(ref _currentPositionSeconds, value))
             {
+                if (!_isUpdatingFromTimer && Math.Abs(_mediaPlayer.Position.TotalSeconds - value) > 1.0)
+                {
+                    try { _mediaPlayer.Position = TimeSpan.FromSeconds(value); } catch { }
+                }
                 OnPropertyChanged(nameof(CurrentPositionFormatted));
             }
         }
@@ -126,7 +131,15 @@ public class AudioPlayerService : ViewModelBase
         {
             if (IsPlaying && _mediaPlayer.NaturalDuration.HasTimeSpan)
             {
-                CurrentPositionSeconds = _mediaPlayer.Position.TotalSeconds;
+                _isUpdatingFromTimer = true;
+                try
+                {
+                    CurrentPositionSeconds = _mediaPlayer.Position.TotalSeconds;
+                }
+                finally
+                {
+                    _isUpdatingFromTimer = false;
+                }
                 var total = _mediaPlayer.NaturalDuration.TimeSpan.TotalSeconds;
                 if (total > 0 && Math.Abs(DurationSeconds - total) > 0.5)
                 {
