@@ -1,0 +1,333 @@
+﻿<Window x:Class="GarminMusicStudio.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:GarminMusicStudio.Views"
+        mc:Ignorable="d"
+        Title="Garmin Music Suite" Height="780" Width="1240"
+        MinHeight="600" MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BrushBgDark}">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ==================== LEFT SIDEBAR ==================== -->
+        <Border Grid.Column="0" Background="{StaticResource BrushSidebar}" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- 1. App Header Logo -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,20,20,24">
+                    <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource BrushPrimaryOrange}" Margin="0,0,12,0">
+                        <TextBlock Text="⌚" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Garmin Studio" FontSize="15" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}"/>
+                        <TextBlock Text="Windows Desktop Edition" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 2. Main Navigation Menu -->
+                <StackPanel Grid.Row="1" Margin="12,0,12,20">
+                    <!-- Tab 0: Watch Sync -->
+                    <RadioButton Content="  ⌚  手錶同步管理" Height="40" Margin="0,0,0,4"
+                                 IsChecked="{Binding SelectedTabIndex, Converter={x:Null}}"
+                                 Command="{Binding SelectTabCommand}" CommandParameter="0">
+                        <RadioButton.Style>
+                            <Style TargetType="RadioButton">
+                                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="FontWeight" Value="Medium"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="RadioButton">
+                                            <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,0">
+                                                <ContentPresenter VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="0">
+                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource BrushPrimaryOrange}"/>
+                                                    <Setter Property="Foreground" Value="#ffffff"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding Path=IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                                        <Condition Binding="{Binding SelectedTabIndex}" Value="1"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter TargetName="bd" Property="Background" Value="#1f1f1f"/>
+                                                </MultiDataTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </RadioButton.Style>
+                    </RadioButton>
+
+                    <!-- Tab 1: YouTube Downloader -->
+                    <RadioButton Content="  📥  YouTube 音樂下載" Height="40" Margin="0,0,0,4"
+                                 Command="{Binding SelectTabCommand}" CommandParameter="1">
+                        <RadioButton.Style>
+                            <Style TargetType="RadioButton">
+                                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="FontWeight" Value="Medium"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="RadioButton">
+                                            <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,0">
+                                                <ContentPresenter VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
+                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource BrushPrimaryOrange}"/>
+                                                    <Setter Property="Foreground" Value="#ffffff"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </RadioButton.Style>
+                    </RadioButton>
+
+                    <!-- Tab 2: Podcast -->
+                    <RadioButton Content="  🎙️  Podcast 下載" Height="40" Margin="0,0,0,4"
+                                 Command="{Binding SelectTabCommand}" CommandParameter="2">
+                        <RadioButton.Style>
+                            <Style TargetType="RadioButton">
+                                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="FontWeight" Value="Medium"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="RadioButton">
+                                            <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,0">
+                                                <ContentPresenter VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="2">
+                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource BrushPrimaryOrange}"/>
+                                                    <Setter Property="Foreground" Value="#ffffff"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </RadioButton.Style>
+                    </RadioButton>
+
+                    <!-- Tab 3: Settings -->
+                    <RadioButton Content="  ⚙️  手錶路徑與設定" Height="40"
+                                 Command="{Binding SelectTabCommand}" CommandParameter="3">
+                        <RadioButton.Style>
+                            <Style TargetType="RadioButton">
+                                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="FontWeight" Value="Medium"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="RadioButton">
+                                            <Border x:Name="bd" Background="Transparent" CornerRadius="6" Padding="12,0">
+                                                <ContentPresenter VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
+                                                    <Setter TargetName="bd" Property="Background" Value="{StaticResource BrushPrimaryOrange}"/>
+                                                    <Setter Property="Foreground" Value="#ffffff"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </RadioButton.Style>
+                    </RadioButton>
+                </StackPanel>
+
+                <!-- 3. Computer Folder Library Tree -->
+                <Border Grid.Row="2" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="0,1,0,0" Padding="12,16,12,12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Folder Section Header -->
+                        <Grid Grid.Row="0" Margin="4,0,4,10">
+                            <TextBlock Text="電腦分類目錄" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                            <Button Content="+ 新增" HorizontalAlignment="Right" Style="{StaticResource FlatButton}" Padding="6,2" FontSize="10"
+                                    Command="{Binding AddFolderCommand}"/>
+                        </Grid>
+
+                        <!-- Folders List -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <ListBox ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}" 
+                                     Background="Transparent" BorderThickness="0">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="bd" Background="Transparent" CornerRadius="4" Padding="8,6" Margin="0,0,0,2">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="📁 " FontSize="11" Foreground="{StaticResource BrushPrimaryOrange}"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding Count}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="6,0,0,0"/>
+                                                        </Grid>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="bd" Property="Background" Value="#222222"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="bd" Property="Background" Value="#1a1a1a"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ==================== MAIN CONTENT AREA ==================== -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="64"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Top Header Bar -->
+            <Border Grid.Row="0" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="0,0,0,1" Padding="24,0">
+                <Grid VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Title according to active tab -->
+                    <TextBlock FontSize="18" FontWeight="Bold">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="手錶音樂同步管理"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
+                                        <Setter Property="Text" Value="YouTube 音訊下載至本地電腦"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="2">
+                                        <Setter Property="Text" Value="Podcast 探索與下載"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
+                                        <Setter Property="Text" Value="手錶路徑與 Subsonic 伺服器設定"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- Watch Connection Status Badge -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="#1f1811" BorderBrush="#59300a" BorderThickness="1" CornerRadius="16" Padding="12,5" Margin="0,0,10,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="⌚ " FontSize="12" Foreground="{StaticResource BrushPrimaryOrange}"/>
+                                <TextBlock Text="{Binding Watch.StorageDisplayText}" FontSize="12" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource BrushPrimaryOrange}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Button Style="{StaticResource FlatButton}" Content="重新整理" Padding="10,5"
+                                Command="{Binding RefreshWatchCommand}" IsEnabled="{Binding IsRefreshingWatch, Converter={x:Null}}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Active View Content -->
+            <Grid Grid.Row="1" Margin="24">
+                <!-- View 0: Watch Sync -->
+                <views:WatchSyncView DataContext="{Binding WatchSyncVM}">
+                    <views:WatchSyncView.Style>
+                        <Style TargetType="views:WatchSyncView">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </views:WatchSyncView.Style>
+                </views:WatchSyncView>
+
+                <!-- View 1: YouTube Downloader -->
+                <views:YouTubeDownloadView DataContext="{Binding YouTubeVM}">
+                    <views:YouTubeDownloadView.Style>
+                        <Style TargetType="views:YouTubeDownloadView">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </views:YouTubeDownloadView.Style>
+                </views:YouTubeDownloadView>
+
+                <!-- View 2: Podcast -->
+                <views:PodcastView DataContext="{Binding PodcastVM}">
+                    <views:PodcastView.Style>
+                        <Style TargetType="views:PodcastView">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="2">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </views:PodcastView.Style>
+                </views:PodcastView>
+
+                <!-- View 3: Settings -->
+                <views:SettingsView DataContext="{Binding SettingsVM}">
+                    <views:SettingsView.Style>
+                        <Style TargetType="views:SettingsView">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedTabIndex}" Value="3">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </views:SettingsView.Style>
+                </views:SettingsView>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

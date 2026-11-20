@@ -1,0 +1,126 @@
+<UserControl x:Class="GarminMusicStudio.Views.YouTubeDownloadView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="900">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- TOP CARD: DOWNLOAD FORM -->
+        <Border Grid.Row="0" Background="{StaticResource BrushCardBg}" BorderBrush="{StaticResource BrushCardBorder}" 
+                BorderThickness="1" CornerRadius="8" Padding="24" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Text="下載 YouTube 音訊至電腦" FontSize="18" FontWeight="SemiBold"/>
+                <TextBlock Text="自動轉碼為 Garmin 手錶專用規格（192kbps、44.1kHz Stereo、ID3v2.3 標籤），保證手錶硬體即時播放。" 
+                           FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,4,0,20"/>
+
+                <!-- URL Input -->
+                <TextBlock Text="YouTube 影片或音樂網址" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" Height="38" Margin="0,0,0,16" 
+                         VerticalContentAlignment="Center" FontSize="13"/>
+
+                <!-- Options & Submit -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="220"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Target Folder -->
+                    <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                        <TextBlock Text="儲存目錄分類" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                        <ComboBox Height="36" ItemsSource="{Binding Folders}" SelectedValue="{Binding TargetFolder}" 
+                                  SelectedValuePath="Name" DisplayMemberPath="Name" Background="#0a0a0a" Foreground="{StaticResource BrushTextPrimary}"
+                                  BorderBrush="{StaticResource BrushCardBorder}"/>
+                    </StackPanel>
+
+                    <!-- Playlist Checkbox -->
+                    <CheckBox Grid.Column="1" Content="若為播放清單或整張專輯，下載全部歌曲" 
+                              IsChecked="{Binding DownloadPlaylist}" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
+
+                    <!-- Download Button -->
+                    <Button Grid.Column="2" Style="{StaticResource OrangeButton}" Content="開始下載與轉碼" 
+                            Command="{Binding StartDownloadCommand}" VerticalAlignment="Bottom" Height="38" Padding="20,0"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- BOTTOM CARD: TASK QUEUE -->
+        <Border Grid.Row="2" Background="{StaticResource BrushCardBg}" BorderBrush="{StaticResource BrushCardBorder}" 
+                BorderThickness="1" CornerRadius="8" Padding="20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="下載任務狀態" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,16"/>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Tasks}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#121212" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="1" 
+                                        CornerRadius="8" Padding="14,12" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Title & Progress -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Progress}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <!-- Status Badge -->
+                                        <Border Grid.Column="1" CornerRadius="6" Padding="10,4" VerticalAlignment="Center" Margin="16,0,0,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#332b14"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status}" Value="completed">
+                                                            <Setter Property="Background" Value="#064e3b"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="failed">
+                                                            <Setter Property="Background" Value="#450a0a"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+
+                                            <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#f59e0b"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}" Value="completed">
+                                                                <Setter Property="Foreground" Value="#34d399"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="failed">
+                                                                <Setter Property="Foreground" Value="#f87171"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

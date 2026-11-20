@@ -1,0 +1,8 @@
+﻿bin/Debug/
+bin/Release/
+obj/
+publish/
+dist/
+*.user
+*.suo
+.vs/
