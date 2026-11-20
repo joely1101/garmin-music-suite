@@ -133,9 +133,9 @@
                                                 <!-- Folder Icon & Name -->
                                                 <TextBlock Grid.Column="2" Text="📁 " FontSize="12" Foreground="#f59e0b" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold">
-                                                    <Run Text="{Binding Name}"/>
+                                                    <Run Text="{Binding Name, Mode=OneWay}"/>
                                                     <Run Text=" [" Foreground="{StaticResource BrushTextMuted}" FontSize="11"/>
-                                                    <Run Text="{Binding TrackCount}" Foreground="{StaticResource BrushPrimaryOrange}" FontSize="11"/>
+                                                    <Run Text="{Binding TrackCount, Mode=OneWay}" Foreground="{StaticResource BrushPrimaryOrange}" FontSize="11"/>
                                                     <Run Text="]" Foreground="{StaticResource BrushTextMuted}" FontSize="11"/>
                                                 </TextBlock>
 
@@ -349,9 +349,9 @@
                                                 <!-- Folder Icon & Name -->
                                                 <TextBlock Grid.Column="2" Text="📁 " FontSize="12" Foreground="#f59e0b" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold">
-                                                    <Run Text="{Binding Name}"/>
+                                                    <Run Text="{Binding Name, Mode=OneWay}"/>
                                                     <Run Text=" [" Foreground="{StaticResource BrushTextMuted}" FontSize="11"/>
-                                                    <Run Text="{Binding TrackCount}" Foreground="{StaticResource BrushPrimaryOrange}" FontSize="11"/>
+                                                    <Run Text="{Binding TrackCount, Mode=OneWay}" Foreground="{StaticResource BrushPrimaryOrange}" FontSize="11"/>
                                                     <Run Text="]" Foreground="{StaticResource BrushTextMuted}" FontSize="11"/>
                                                 </TextBlock>
 

@@ -47,7 +47,11 @@ public class LocalFolderGroup : ViewModelBase
 
     public ObservableCollection<Track> Tracks { get; } = new();
 
-    public int TrackCount => Tracks.Count;
+    public int TrackCount
+    {
+        get => Tracks.Count;
+        set { }
+    }
 
     public ICommand ToggleExpandCommand { get; }
 
@@ -100,7 +104,11 @@ public class WatchFolderGroup : ViewModelBase
 
     public ObservableCollection<WatchTrack> Tracks { get; } = new();
 
-    public int TrackCount => Tracks.Count;
+    public int TrackCount
+    {
+        get => Tracks.Count;
+        set { }
+    }
 
     public ICommand ToggleExpandCommand { get; }
 
