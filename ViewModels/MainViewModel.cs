@@ -18,6 +18,8 @@ public class MainViewModel : ViewModelBase
     public PodcastViewModel PodcastVM { get; }
     public SettingsViewModel SettingsVM { get; }
 
+    public AudioPlayerService AudioPlayer => AudioPlayerService.Instance;
+
     public ObservableCollection<FolderItem> Folders { get; } = new();
 
     public int SelectedTabIndex
@@ -53,7 +55,7 @@ public class MainViewModel : ViewModelBase
         {
             if (SetField(ref _selectedFolder, value))
             {
-                WatchSyncVM.FilterByFolder(value?.Name == "全部歌曲" ? null : value?.Name);
+                WatchSyncVM.FilterBySidebarFolder(value?.Name);
             }
         }
     }

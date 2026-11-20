@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:GarminMusicStudio.Views"
         mc:Ignorable="d"
-        Title="Garmin Music Suite" Height="780" Width="1240"
-        MinHeight="600" MinWidth="900"
+        Title="Garmin Music Suite" Height="820" Width="1280"
+        MinHeight="650" MinWidth="960"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BrushBgDark}">
 
@@ -19,8 +19,8 @@
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
@@ -49,7 +49,7 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="240"/>
+            <ColumnDefinition Width="250"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
@@ -60,11 +60,12 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- 1. App Header Logo -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,20,20,24">
-                    <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource BrushPrimaryOrange}" Margin="0,0,12,0">
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="16,16,16,18">
+                    <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource BrushPrimaryOrange}" Margin="0,0,10,0">
                         <TextBlock Text="⌚" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
@@ -74,7 +75,7 @@
                 </StackPanel>
 
                 <!-- 2. Main Navigation Menu -->
-                <StackPanel Grid.Row="1" Margin="12,0,12,20">
+                <StackPanel Grid.Row="1" Margin="12,0,12,16">
                     <!-- Tab 0: Watch Sync -->
                     <RadioButton Style="{StaticResource NavRadioButton}"
                                  Content="  ⌚  手錶同步管理"
@@ -101,7 +102,7 @@
                 </StackPanel>
 
                 <!-- 3. Computer Folder Library Tree -->
-                <Border Grid.Row="2" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="0,1,0,0" Padding="12,16,12,12">
+                <Border Grid.Row="2" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="0,1,0,0" Padding="12,14,12,8">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -109,7 +110,7 @@
                         </Grid.RowDefinitions>
 
                         <!-- Folder Section Header -->
-                        <Grid Grid.Row="0" Margin="4,0,4,10">
+                        <Grid Grid.Row="0" Margin="4,0,4,8">
                             <TextBlock Text="電腦分類目錄" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
                             <Button Content="+ 新增" HorizontalAlignment="Right" Style="{StaticResource FlatButton}" Padding="6,2" FontSize="10"
                                     Command="{Binding AddFolderCommand}"/>
@@ -124,7 +125,7 @@
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="ListBoxItem">
-                                                    <Border x:Name="bd" Background="Transparent" CornerRadius="4" Padding="8,6" Margin="0,0,0,2">
+                                                    <Border x:Name="bd" Background="Transparent" CornerRadius="4" Padding="8,5" Margin="0,0,0,2">
                                                         <Grid>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="Auto"/>
@@ -153,13 +154,142 @@
                         </ScrollViewer>
                     </Grid>
                 </Border>
+
+                <!-- 4. Fixed Bottom Area: Mini Player & Watch Connection Card -->
+                <StackPanel Grid.Row="3">
+                    <!-- Mini Music Player (Visible when AudioPlayer has track) -->
+                    <Border Background="#141414" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="0,1,0,0" Padding="14,12"
+                            Visibility="{Binding AudioPlayer.IsVisible, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <!-- Track Info Header -->
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Width="32" Height="32" CornerRadius="6" Background="#261b11" BorderBrush="#59300a" BorderThickness="1" Margin="0,0,10,0">
+                                    <TextBlock Text="🎵" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding AudioPlayer.CurrentTitle}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding AudioPlayer.CurrentArtist}" FontSize="10" Foreground="{StaticResource BrushTextMuted}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Slider & Timestamps -->
+                            <Slider Value="{Binding AudioPlayer.CurrentPositionSeconds, Mode=TwoWay}"
+                                    Maximum="{Binding AudioPlayer.DurationSeconds}"
+                                    Margin="0,0,0,3"/>
+                            <Grid Margin="0,0,0,8">
+                                <TextBlock Text="{Binding AudioPlayer.CurrentPositionFormatted}" FontSize="10" Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Left" FontFamily="Consolas, monospace"/>
+                                <TextBlock Text="{Binding AudioPlayer.DurationFormatted}" FontSize="10" Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Right" FontFamily="Consolas, monospace"/>
+                            </Grid>
+
+                            <!-- 5 Controls: Prev, Play/Pause, Next, +10s, Speed -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Prev -->
+                                <Button Grid.Column="0" Style="{StaticResource FlatButton}" Padding="4,4" Content="⏮" FontSize="11" Margin="0,0,4,0"
+                                        Command="{Binding AudioPlayer.PlayPrevCommand}" ToolTip="上一首"/>
+
+                                <!-- Play / Pause -->
+                                <Button Grid.Column="1" Command="{Binding AudioPlayer.TogglePlayPauseCommand}"
+                                        Width="32" Height="32" Margin="4,0" ToolTip="播放 / 暫停" Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{StaticResource BrushPrimaryOrange}" CornerRadius="16">
+                                                <TextBlock Text="{Binding DataContext.AudioPlayer.PlayPauseIcon, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                           Foreground="#ffffff" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <!-- Next -->
+                                <Button Grid.Column="2" Style="{StaticResource FlatButton}" Padding="4,4" Content="⏭" FontSize="11" Margin="4,0,4,0"
+                                        Command="{Binding AudioPlayer.PlayNextCommand}" ToolTip="下一首"/>
+
+                                <!-- +10s -->
+                                <Button Grid.Column="3" Style="{StaticResource FlatButton}" Padding="6,4" Content="+10s" FontSize="10" FontWeight="SemiBold" Margin="0,0,4,0"
+                                        Command="{Binding AudioPlayer.Forward10Command}" ToolTip="快轉 10 秒"/>
+
+                                <!-- Speed -->
+                                <Button Grid.Column="4" Style="{StaticResource FlatButton}" Padding="6,4" Content="{Binding AudioPlayer.PlaybackRateFormatted}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource BrushPrimaryOrange}"
+                                        Command="{Binding AudioPlayer.CycleSpeedCommand}" ToolTip="切換播放速度 (1x / 1.2x / 1.5x)"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Watch Hardware Storage Status Card (Matches Image 8) -->
+                    <Border Background="#101010" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="0,1,0,0" Padding="14,12">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse Width="8" Height="8" Margin="0,0,6,0">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="#eab308"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Watch.IsConnected}" Value="True">
+                                                        <Setter Property="Fill" Value="#10b981"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock FontSize="11" FontWeight="SemiBold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="等待手錶 USB 連線"/>
+                                                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Watch.IsConnected}" Value="True">
+                                                        <Setter Property="Text" Value="Garmin 手錶已連線"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+
+                                <Button Grid.Column="1" Style="{StaticResource FlatButton}" Padding="4,2" Content="🔄" FontSize="10"
+                                        Command="{Binding RefreshWatchCommand}" ToolTip="重新偵測手錶"/>
+                            </Grid>
+
+                            <!-- Storage Info -->
+                            <Grid Margin="0,0,0,6" Visibility="{Binding Watch.IsConnected, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding Watch.DriveOrPath}" FontSize="10" Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Left"/>
+                                <TextBlock Text="{Binding Watch.StorageDisplayText}" FontSize="10" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Right"/>
+                            </Grid>
+
+                            <!-- Storage Bar -->
+                            <ProgressBar Value="{Binding Watch.UsedPercentage}" Maximum="100" Height="4"
+                                         Visibility="{Binding Watch.IsConnected, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
             </Grid>
         </Border>
 
         <!-- ==================== MAIN CONTENT AREA ==================== -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="64"/>
+                <RowDefinition Height="58"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -172,10 +302,10 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Title according to active tab -->
-                    <TextBlock FontSize="18" FontWeight="Bold">
+                    <TextBlock FontSize="17" FontWeight="Bold">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="手錶音樂同步管理"/>
+                                <Setter Property="Text" Value="手錶音樂同步管理 (Garmin Music)"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SelectedTabIndex}" Value="1">
                                         <Setter Property="Text" Value="YouTube 音訊下載至本地電腦"/>
@@ -191,7 +321,7 @@
                         </TextBlock.Style>
                     </TextBlock>
 
-                    <!-- Watch Connection Status Badge -->
+                    <!-- Watch Connection Top Status Badge (Matching Image 8 top right) -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Background="#1f1811" BorderBrush="#59300a" BorderThickness="1" CornerRadius="16" Padding="12,5" Margin="0,0,10,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -208,7 +338,7 @@
             </Border>
 
             <!-- Active View Content -->
-            <Grid Grid.Row="1" Margin="24">
+            <Grid Grid.Row="1" Margin="20">
                 <!-- View 0: Watch Sync -->
                 <views:WatchSyncView DataContext="{Binding WatchSyncVM}"
                                      Visibility="{Binding DataContext.IsWatchSyncTab, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}"/>

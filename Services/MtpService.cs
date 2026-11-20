@@ -180,11 +180,15 @@ public class MtpService
                     }
                     catch { }
 
+                    var folder = Path.GetDirectoryName(rel)?.Replace('\\', '/');
+                    if (string.IsNullOrEmpty(folder) || folder == ".") folder = "音樂";
+
                     tracks.Add(new WatchTrack
                     {
                         Title = title,
                         Artist = artist,
                         RelPath = rel,
+                        Folder = folder,
                         Size = fi.Length
                     });
                 }
@@ -208,11 +212,19 @@ public class MtpService
 
                             if (name.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
                             {
+                                var folder = "音樂";
+                                if (path.Contains("\\") || path.Contains("/"))
+                                {
+                                    var dir = Path.GetDirectoryName(path.Replace('/', '\\'));
+                                    if (!string.IsNullOrEmpty(dir)) folder = Path.GetFileName(dir);
+                                }
+
                                 tracks.Add(new WatchTrack
                                 {
                                     Title = Path.GetFileNameWithoutExtension(name),
                                     Artist = "Garmin MTP",
                                     RelPath = path,
+                                    Folder = folder,
                                     Size = size
                                 });
                             }

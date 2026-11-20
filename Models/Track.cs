@@ -7,6 +7,7 @@ namespace GarminMusicStudio.Models;
 public class Track : INotifyPropertyChanged
 {
     private bool _isSelected;
+    private bool _isSyncedOnWatch;
     private string _title = string.Empty;
     private string _artist = string.Empty;
     private string _album = string.Empty;
@@ -43,6 +44,12 @@ public class Track : INotifyPropertyChanged
     {
         get => _isSelected;
         set => SetField(ref _isSelected, value);
+    }
+
+    public bool IsSyncedOnWatch
+    {
+        get => _isSyncedOnWatch;
+        set => SetField(ref _isSyncedOnWatch, value);
     }
 
     public string DurationFormatted

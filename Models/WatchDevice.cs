@@ -101,10 +101,37 @@ public class WatchDevice : INotifyPropertyChanged
     }
 }
 
-public class WatchTrack
+public class WatchTrack : INotifyPropertyChanged
 {
-    public string Title { get; set; } = string.Empty;
-    public string Artist { get; set; } = "Unknown";
+    private bool _isSelected;
+    private string _title = string.Empty;
+    private string _artist = "Unknown";
+    private string _folder = "音樂";
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetField(ref _isSelected, value);
+    }
+
+    public string Title
+    {
+        get => _title;
+        set => SetField(ref _title, value);
+    }
+
+    public string Artist
+    {
+        get => _artist;
+        set => SetField(ref _artist, value);
+    }
+
+    public string Folder
+    {
+        get => _folder;
+        set => SetField(ref _folder, value);
+    }
+
     public string RelPath { get; set; } = string.Empty;
     public long Size { get; set; }
     public string SizeFormatted
@@ -115,6 +142,18 @@ public class WatchTrack
                 return $"{Size / 1024.0:F1} KB";
             return $"{Size / (1024.0 * 1024.0):F1} MB";
         }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    protected bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (Equals(field, value)) return false;
+        field = value;
+        OnPropertyChanged(propertyName);
+        return true;
     }
 }
 

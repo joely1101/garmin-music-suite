@@ -24,7 +24,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBox Text="{Binding CustomWatchPath, Mode=TwoWay}" IsReadOnly="True" Height="36" 
+                        <TextBox Text="{Binding CustomWatchPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="36" 
                                  VerticalContentAlignment="Center" Margin="0,0,10,0"/>
 
                         <Button Grid.Column="1" Style="{StaticResource OrangeButton}" Content="瀏覽選取..." 
