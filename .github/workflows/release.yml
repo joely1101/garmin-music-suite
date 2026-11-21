@@ -59,7 +59,7 @@ jobs:
       - name: Publish GarminMusicStudio Standalone (.exe)
         shell: pwsh
         run: |
-          dotnet publish GarminMusicStudio.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o release_output
+          dotnet publish GarminMusicStudio.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o release_output
 
       - name: Package Release Assets
         shell: pwsh

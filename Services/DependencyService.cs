@@ -39,36 +39,39 @@ public class DependencyService
     {
         if (IsDownloadingDependencies) return;
 
-        // 1. Ensure mtp_helper.ps1 exists
-        MtpService.Instance.EnsureMtpScriptExists();
+        // 1. Try extracting embedded binaries directly from inside the .exe
+        ExtractEmbeddedBinary("mtp_helper.ps1", MtpHelperPath);
+        ExtractEmbeddedBinary("yt-dlp.exe", YtDlpPath);
+        ExtractEmbeddedBinary("ffmpeg.exe", FfmpegPath);
 
-        if (IsAllReady) return;
+        if (IsAllReady)
+        {
+            OnStatusChanged?.Invoke("必要組件已就緒 (yt-dlp.exe, ffmpeg.exe, mtp_helper.ps1)");
+            return;
+        }
 
         IsDownloadingDependencies = true;
         try
         {
-            // 2. Ensure yt-dlp.exe
+            // 2. If yt-dlp.exe was not embedded, download it
             if (!IsYtDlpReady)
             {
                 OnStatusChanged?.Invoke("正在自動補充 yt-dlp.exe 下載組件...");
-                // Try from yt-dlp official release
                 var okYt = await DownloadFileWithRetryAsync(
                     "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe",
                     YtDlpPath);
 
                 if (!okYt)
                 {
-                    // Fallback to our own GitHub release asset
                     await DownloadFileWithRetryAsync(
                         "https://github.com/joely1101/garmin-music-suite/releases/latest/download/yt-dlp.exe",
                         YtDlpPath);
                 }
             }
 
-            // 3. Ensure ffmpeg.exe
+            // 3. If ffmpeg.exe was not embedded, check system PATH or download it
             if (!IsFfmpegReady)
             {
-                // Check if system PATH has ffmpeg.exe
                 var sysFfmpeg = FindInSystemPath("ffmpeg.exe");
                 if (!string.IsNullOrEmpty(sysFfmpeg) && File.Exists(sysFfmpeg))
                 {
@@ -78,14 +81,12 @@ public class DependencyService
                 if (!IsFfmpegReady)
                 {
                     OnStatusChanged?.Invoke("正在自動補充 ffmpeg.exe 轉檔組件...");
-                    // Try downloading direct ffmpeg.exe from our GitHub release
                     var okFfmpeg = await DownloadFileWithRetryAsync(
                         "https://github.com/joely1101/garmin-music-suite/releases/latest/download/ffmpeg.exe",
                         FfmpegPath);
 
                     if (!okFfmpeg || !IsFfmpegReady)
                     {
-                        // Fallback: download essentials zip from Gyan FFmpeg and extract ffmpeg.exe
                         await DownloadAndExtractFfmpegAsync();
                     }
                 }
@@ -109,6 +110,41 @@ public class DependencyService
         {
             IsDownloadingDependencies = false;
         }
+    }
+
+    private static bool ExtractEmbeddedBinary(string partialName, string targetPath)
+    {
+        try
+        {
+            if (File.Exists(targetPath) && new FileInfo(targetPath).Length > 1024) return true;
+
+            var dir = Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+
+            var asm = System.Reflection.Assembly.GetExecutingAssembly();
+            var resNames = asm.GetManifestResourceNames();
+            var resName = System.Linq.Enumerable.FirstOrDefault(resNames, r => 
+                r.EndsWith(partialName, StringComparison.OrdinalIgnoreCase) || 
+                r.IndexOf(partialName.Replace('-', '_'), StringComparison.OrdinalIgnoreCase) >= 0);
+
+            if (resName != null)
+            {
+                using var stream = asm.GetManifestResourceStream(resName);
+                if (stream != null && stream.Length > 0)
+                {
+                    var temp = targetPath + ".tmp";
+                    using (var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        stream.CopyTo(fs);
+                    }
+                    if (File.Exists(targetPath)) File.Delete(targetPath);
+                    File.Move(temp, targetPath);
+                    return true;
+                }
+            }
+        }
+        catch { }
+        return false;
     }
 
     private static string? FindInSystemPath(string fileName)

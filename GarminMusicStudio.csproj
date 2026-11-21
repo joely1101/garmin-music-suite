@@ -12,12 +12,15 @@
     <FileVersion>1.0.1.0</FileVersion>
     <ProductName>Garmin Music Studio</ProductName>
     <Description>Garmin Music Studio Desktop Edition</Description>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
     <Resource Include="app.ico" />
     <Resource Include="app.png" />
     <EmbeddedResource Include="bin\mtp_helper.ps1" />
+    <EmbeddedResource Include="bin\yt-dlp.exe" />
+    <EmbeddedResource Include="bin\ffmpeg.exe" />
   </ItemGroup>
 
   <ItemGroup>
