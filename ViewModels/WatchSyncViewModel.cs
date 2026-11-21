@@ -669,6 +669,26 @@ public class WatchSyncViewModel : ViewModelBase
         }
     }
 
+    private async Task ShowPlaylistDetailAsync(object? param)
+    {
+        if (param is WatchTrack track)
+        {
+            var device = _mainVM.Watch;
+            if (device == null)
+            {
+                MessageBox.Show("請先確認手錶已成功連線。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var entries = await MtpService.Instance.GetWatchPlaylistEntriesAsync(device, track);
+            var dialog = new Views.PlaylistDetailDialog(track.Title, entries)
+            {
+                Owner = Application.Current.MainWindow
+            };
+            dialog.ShowDialog();
+        }
+    }
+
     private async Task CreatePlaylistFromSelectedAsync()
     {
         var selectedWatch = WatchFolderGroups.SelectMany(g => g.Tracks).Where(t => t.IsSelected).ToList();
