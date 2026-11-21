@@ -8,6 +8,8 @@
 )
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 function Get-MTPDevices {
     $shell = New-Object -ComObject Shell.Application
@@ -203,22 +205,21 @@ function List-MTPSubfolders {
 
 function Copy-FileToMTP {
     param([string]$DevName, [string]$RelPath, [string]$SrcFile)
-    if (!(Test-Path $SrcFile)) {
+    if (![System.IO.File]::Exists($SrcFile)) {
         return [PSCustomObject]@{ success = $false; error = "本機來源檔案不存在: $SrcFile" }
     }
+    $srcItem = Get-Item $SrcFile
+    $srcName = $srcItem.Name
+    $srcLength = $srcItem.Length
 
     $folder = Get-MTPFolderItem -DevName $DevName -RelPath $RelPath -Create
     if (!$folder) {
-        return [PSCustomObject]@{ success = $false; error = "找不到或無法建立目標資料夾: $RelPath" }
+        return [PSCustomObject]@{ success = $false; error = "找不到或無法建立手錶目標資料夾: $RelPath" }
     }
-
-    $srcFileName = [System.IO.Path]::GetFileName($SrcFile)
-    $srcItem = Get-Item $SrcFile
-    $srcSize = $srcItem.Length
 
     # If the file already exists on the watch, delete it first to ensure clean copy & detection
     try {
-        $existing = $folder.Items() | Where-Object { $_.Name -eq $srcFileName } | Select-Object -First 1
+        $existing = $folder.Items() | Where-Object { $_.Name -eq $srcName } | Select-Object -First 1
         if ($existing) {
             $existing.InvokeVerb("delete")
             Start-Sleep -Milliseconds 500
@@ -226,44 +227,44 @@ function Copy-FileToMTP {
     } catch {}
 
     try {
-        # CopyHere with options: 16 (Yes to all) + 512 (Do not confirm directory creation)
+        # 16 = FOF_NOCONFIRMATION, 512 = FOF_NOERRORUI
         $folder.CopyHere($SrcFile, 16 + 512)
-    } catch {
-        return [PSCustomObject]@{ success = $false; error = $_.Exception.Message }
-    }
 
-    # Asynchronous completion polling
-    # Shell.Application CopyHere transfers in the background. We must wait until the file appears and stabilizes.
-    $timeoutSeconds = [Math]::Max(45, [int]($srcSize / (1024 * 1024)) * 3 + 15)
-    $start = [DateTime]::UtcNow
-    $found = $null
-    $lastSizeStr = ""
-    $stableCount = 0
+        # 由於 Windows Shell 對 MTP 的 CopyHere 是非同步執行，
+        # 若 PowerShell 程序立即結束，Explorer 將中斷傳輸。
+        # 因此在此等候傳輸完成（輪詢檔案是否在目標目錄中完成寫入）
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        # 根據檔案大小動態計算等候時間：至少 45 秒，每 10MB 增加 5 秒
+        $maxWaitMs = [Math]::Max(45000, [int]($srcLength / (10 * 1024 * 1024)) * 5000 + 35000)
+        $completed = $false
 
-    while (([DateTime]::UtcNow - $start).TotalSeconds -lt $timeoutSeconds) {
-        Start-Sleep -Milliseconds 800
-        $found = $folder.Items() | Where-Object { $_.Name -eq $srcFileName } | Select-Object -First 1
-        if ($found) {
-            $curSizeStr = $folder.GetDetailsOf($found, 2)
-            if ($curSizeStr -and $curSizeStr -eq $lastSizeStr) {
-                $stableCount++
-                if ($stableCount -ge 2) {
-                    # Transfer complete and stabilized!
+        while ($sw.ElapsedMilliseconds -lt $maxWaitMs) {
+            Start-Sleep -Milliseconds 800
+            $destItem = $folder.Items() | Where-Object { $_.Name -eq $srcName } | Select-Object -First 1
+            if ($destItem) {
+                $detSize = $folder.GetDetailsOf($destItem, 2)
+                # 當 GetDetailsOf 返回非空且非 0 時，代表傳輸已順利完成
+                if ($detSize -and $detSize.Trim() -ne "" -and $detSize -ne "0" -and $detSize -ne "0 KB") {
+                    $completed = $true
+                    Start-Sleep -Milliseconds 500
                     break
                 }
-            } else {
-                $lastSizeStr = $curSizeStr
-                $stableCount = 0
             }
         }
-    }
 
-    if ($found) {
-        # Ensure file handle release
-        Start-Sleep -Milliseconds 500
-        return [PSCustomObject]@{ success = $true }
-    } else {
-        return [PSCustomObject]@{ success = $false; error = "檔案傳輸逾時，目標資料夾未在時間內完成寫入 ($srcFileName)" }
+        if ($completed) {
+            return [PSCustomObject]@{ success = $true }
+        }
+
+        # 最後再次確認檔案是否存在
+        $finalCheck = $folder.Items() | Where-Object { $_.Name -eq $srcName } | Select-Object -First 1
+        if ($finalCheck) {
+            return [PSCustomObject]@{ success = $true }
+        } else {
+            return [PSCustomObject]@{ success = $false; error = "傳輸逾時，檔案未成功寫入手錶" }
+        }
+    } catch {
+        return [PSCustomObject]@{ success = $false; error = $_.Exception.Message }
     }
 }
 
@@ -309,61 +310,42 @@ function List-MTPFiles {
     if (!$folder) {
         return @()
     }
-    
-    $fileList = New-Object System.Collections.ArrayList
 
-    function Recurse-Folder($curFolder, $currentRel) {
-        foreach ($item in $curFolder.Items()) {
+    # 遞迴掃描 MTP 目錄下所有音樂與播放清單檔案
+    function Recurse-MTPFolder($f, $rel) {
+        $result = @()
+        foreach ($item in $f.Items()) {
             if ($item.IsFolder) {
                 $subF = $null
                 try { $subF = $item.GetFolder } catch {}
                 if ($subF) {
-                    $subRel = if ($currentRel) { "$currentRel\$($item.Name)" } else { $item.Name }
-                    Recurse-Folder $subF $subRel
+                    $nextRel = if ($rel) { "$rel\$($item.Name)" } else { $item.Name }
+                    $result += Recurse-MTPFolder $subF $nextRel
                 }
             } else {
                 $name = $item.Name
                 $ext = [System.IO.Path]::GetExtension($name).ToLower()
-                if ($ext -in @('.mp3', '.m4a', '.aac', '.flac', '.wav', '.wma', '.ogg')) {
-                    $itemRel = if ($currentRel) { "$currentRel\$name" } else { $name }
-                    $fullPath = if ($RelPath) { "mtp:\$DevName\$RelPath\$itemRel" } else { "mtp:\$DevName\$itemRel" }
-                    
-                    $sizeVal = 0
-                    try { $sizeVal = [int64]$item.Size } catch {}
-                    $sizeStr = ""
-                    try { $sizeStr = $curFolder.GetDetailsOf($item, 2) } catch {}
-                    
-                    $title = ""
-                    try { $title = $curFolder.GetDetailsOf($item, 8) } catch {}
-                    $artist = ""
-                    try { $artist = $curFolder.GetDetailsOf($item, 9) } catch {}
-                    $duration = ""
-                    try { $duration = $curFolder.GetDetailsOf($item, 13) } catch {}
-
-                    $folderName = if ($currentRel) {
-                        $parts = $currentRel.Split('\')
-                        $parts[0]
-                    } else { "音樂" }
-
-                    $obj = [PSCustomObject]@{
+                if ($ext -in @('.mp3', '.m4a', '.aac', '.flac', '.wav', '.wma', '.ogg', '.m3u', '.m3u8')) {
+                    $sizeStr = $f.GetDetailsOf($item, 2)
+                    $folderName = if ($rel) { $rel.Split('\')[0] } else { "手錶音樂" }
+                    $fileRel = if ($rel) { "$rel\$name" } else { $name }
+                    $result += [PSCustomObject]@{
                         name        = $name
-                        path        = $fullPath
-                        rel_path    = $itemRel
+                        folder      = $folderName
                         sub_folder  = $folderName
-                        size        = $sizeVal
+                        rel_path    = $fileRel
                         size_str    = $sizeStr
-                        title       = $title
-                        artist      = $artist
-                        duration    = $duration
+                        size        = $item.Size
+                        path        = "mtp:\$DevName\$RelPath\$fileRel"
                     }
-                    [void]$fileList.Add($obj)
                 }
             }
         }
+        return @($result)
     }
 
-    Recurse-Folder $folder ""
-    return @($fileList)
+    $allFiles = @(Recurse-MTPFolder $folder "")
+    return @($allFiles)
 }
 
 if ($Action -eq "list_devices") {

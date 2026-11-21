@@ -37,7 +37,9 @@ public class MtpService
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                    StandardErrorEncoding = System.Text.Encoding.UTF8
                 };
 
                 using var proc = Process.Start(psi);
@@ -362,36 +364,46 @@ public class MtpService
                             var name = el.GetProperty("name").GetString() ?? "";
                             var path = el.GetProperty("path").GetString() ?? "";
                             var relPath = el.TryGetProperty("rel_path", out var rp) ? rp.GetString() ?? name : name;
-                            var subFolder = el.TryGetProperty("sub_folder", out var sfp) ? sfp.GetString() ?? "音樂" : "音樂";
+                            
+                            // Check folder, then sub_folder, then relative path parent
+                            var folder = "";
+                            if (el.TryGetProperty("folder", out var fp) && !string.IsNullOrWhiteSpace(fp.GetString()))
+                            {
+                                folder = fp.GetString()!;
+                            }
+                            else if (el.TryGetProperty("sub_folder", out var sfp) && !string.IsNullOrWhiteSpace(sfp.GetString()))
+                            {
+                                folder = sfp.GetString()!;
+                            }
+                            else if (!string.IsNullOrEmpty(relPath) && (relPath.Contains('\\') || relPath.Contains('/')))
+                            {
+                                var parts = relPath.Replace('/', '\\').Split('\\');
+                                if (parts.Length > 1) folder = parts[0];
+                            }
+
+                            if (string.IsNullOrWhiteSpace(folder) || folder == ".")
+                            {
+                                folder = "手錶音樂";
+                            }
+
                             var size = el.TryGetProperty("size", out var sp) ? sp.GetInt64() : 0;
                             var sizeStr = el.TryGetProperty("size_str", out var ssp) ? ssp.GetString() ?? "" : "";
-                            var title = el.TryGetProperty("title", out var tp) ? tp.GetString() ?? "" : "";
-                            var artist = el.TryGetProperty("artist", out var ap) ? ap.GetString() ?? "" : "";
 
                             if (size == 0 && !string.IsNullOrEmpty(sizeStr))
                             {
                                 size = ParseSizeStringToBytes(sizeStr);
                             }
 
-                            if (string.IsNullOrWhiteSpace(title))
-                            {
-                                title = Path.GetFileNameWithoutExtension(name);
-                            }
-                            if (string.IsNullOrWhiteSpace(artist))
-                            {
-                                artist = "Garmin 手錶";
-                            }
-                            if (string.IsNullOrWhiteSpace(subFolder) || subFolder == ".")
-                            {
-                                subFolder = "音樂";
-                            }
+                            // Always use clean file name without extension for Title
+                            var title = Path.GetFileNameWithoutExtension(name);
+                            var artist = "Garmin 手錶";
 
                             tracks.Add(new WatchTrack
                             {
                                 Title = title,
                                 Artist = artist,
                                 RelPath = path,
-                                Folder = subFolder,
+                                Folder = folder,
                                 Size = size
                             });
                         }

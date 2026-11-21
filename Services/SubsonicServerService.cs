@@ -15,7 +15,7 @@ public class SubsonicServerService
 
     private HttpListener? _listener;
     private CancellationTokenSource? _cts;
-    public int Port { get; private set; } = 28888;
+    public int Port { get; private set; } = 48888;
     public bool IsRunning => _listener?.IsListening ?? false;
 
     public string LocalIpAddress
@@ -36,7 +36,7 @@ public class SubsonicServerService
         }
     }
 
-    public void Start(int port = 28888)
+    public void Start(int port = 48888)
     {
         if (IsRunning) return;
 

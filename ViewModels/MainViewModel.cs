@@ -100,7 +100,7 @@ public class MainViewModel : ViewModelBase
         await RefreshWatchStatusAsync();
         
         // Start Subsonic server
-        SubsonicServerService.Instance.Start(28888);
+        SubsonicServerService.Instance.Start(48888);
     }
 
     public async Task RefreshFoldersAsync()

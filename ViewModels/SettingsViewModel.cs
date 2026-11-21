@@ -10,7 +10,7 @@ public class SettingsViewModel : ViewModelBase
 {
     private readonly MainViewModel _mainVM;
     private string _customWatchPath = string.Empty;
-    private int _subsonicPort = 28888;
+    private int _subsonicPort = 48888;
     private bool _isServerRunning;
     private string _localIp = "127.0.0.1";
     private bool _isLoadingDevices;
