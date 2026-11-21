@@ -24,7 +24,13 @@ public class YouTubeViewModel : ViewModelBase
     public string TargetFolder
     {
         get => _targetFolder;
-        set => SetField(ref _targetFolder, value);
+        set
+        {
+            if (SetField(ref _targetFolder, value) && !string.IsNullOrWhiteSpace(value))
+            {
+                DatabaseService.Instance.SetSetting("youtube_target_folder", value);
+            }
+        }
     }
 
     public bool DownloadPlaylist
@@ -46,10 +52,13 @@ public class YouTubeViewModel : ViewModelBase
     public ICommand CancelTaskCommand { get; }
     public ICommand DeleteTaskCommand { get; }
     public ICommand ClearTasksCommand { get; }
+    public ICommand AddFolderCommand { get; }
 
     public YouTubeViewModel(MainViewModel mainVM)
     {
         _mainVM = mainVM;
+        _targetFolder = DatabaseService.Instance.GetSetting("youtube_target_folder", "音樂");
+
         StartDownloadCommand = new RelayCommand(StartDownload);
         CancelTaskCommand = new RelayCommand(param =>
         {
@@ -63,6 +72,20 @@ public class YouTubeViewModel : ViewModelBase
         {
             YouTubeDownloadService.Instance.ClearTasks();
         });
+        AddFolderCommand = new RelayCommand(PromptAddFolder);
+    }
+
+    private void PromptAddFolder()
+    {
+        var dialog = new Views.InputDialog("新增下載分類目錄", "請輸入新目錄名稱 (例如: 跑步音樂、熱門):");
+        dialog.Owner = Application.Current.MainWindow;
+        if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.InputText))
+        {
+            var folderName = dialog.InputText.Trim();
+            DatabaseService.Instance.CreateFolder(folderName);
+            _ = _mainVM.RefreshFoldersAsync();
+            TargetFolder = folderName;
+        }
     }
 
     private void StartDownload()
@@ -73,10 +96,13 @@ public class YouTubeViewModel : ViewModelBase
             return;
         }
 
-        var target = string.IsNullOrWhiteSpace(TargetFolder) || TargetFolder == "全部歌曲" || TargetFolder == "全部目錄"
-            ? "音樂"
-            : TargetFolder.Trim();
+        if (string.IsNullOrWhiteSpace(TargetFolder))
+        {
+            MessageBox.Show("請先選擇下載目錄！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
 
+        var target = TargetFolder.Trim();
         YouTubeDownloadService.Instance.StartDownload(Url.Trim(), target, DownloadPlaylist);
         Url = string.Empty;
     }

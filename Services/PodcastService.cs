@@ -151,25 +151,31 @@ public class PodcastService
 
     public void CancelTask(DownloadTask task)
     {
-        try
+        if (task.Status == "downloading" || task.Status == "queued" || task.Status == "processing")
         {
-            task.Cts?.Cancel();
-        }
-        catch { }
+            try
+            {
+                task.Cts?.Cancel();
+            }
+            catch { }
 
-        task.Status = "cancelled";
-        task.Progress = "已取消下載";
+            task.Status = "cancelled";
+            task.Progress = "已取消下載";
 
-        // Remove incomplete file if exists
-        if (!string.IsNullOrEmpty(task.OutputFilePath) && File.Exists(task.OutputFilePath))
-        {
-            try { File.Delete(task.OutputFilePath); } catch { }
+            // Only delete incomplete/partial file
+            if (!string.IsNullOrEmpty(task.OutputFilePath) && File.Exists(task.OutputFilePath))
+            {
+                try { File.Delete(task.OutputFilePath); } catch { }
+            }
         }
     }
 
     public void DeleteTask(DownloadTask task)
     {
-        CancelTask(task);
+        if (task.Status == "downloading" || task.Status == "queued" || task.Status == "processing")
+        {
+            CancelTask(task);
+        }
         App.Current.Dispatcher.Invoke(() => Tasks.Remove(task));
     }
 
@@ -177,7 +183,10 @@ public class PodcastService
     {
         foreach (var task in Tasks.ToList())
         {
-            CancelTask(task);
+            if (task.Status == "downloading" || task.Status == "queued" || task.Status == "processing")
+            {
+                CancelTask(task);
+            }
         }
         App.Current.Dispatcher.Invoke(() => Tasks.Clear());
     }

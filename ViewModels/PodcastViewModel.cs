@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using GarminMusicStudio.Models;
 using GarminMusicStudio.Services;
@@ -24,7 +25,13 @@ public class PodcastViewModel : ViewModelBase
     public string TargetFolder
     {
         get => _targetFolder;
-        set => SetField(ref _targetFolder, value);
+        set
+        {
+            if (SetField(ref _targetFolder, value) && !string.IsNullOrWhiteSpace(value))
+            {
+                DatabaseService.Instance.SetSetting("podcast_target_folder", value);
+            }
+        }
     }
 
     public bool IsSearching
@@ -61,10 +68,13 @@ public class PodcastViewModel : ViewModelBase
     public ICommand CancelTaskCommand { get; }
     public ICommand DeleteTaskCommand { get; }
     public ICommand ClearTasksCommand { get; }
+    public ICommand AddFolderCommand { get; }
 
     public PodcastViewModel(MainViewModel mainVM)
     {
         _mainVM = mainVM;
+        _targetFolder = DatabaseService.Instance.GetSetting("podcast_target_folder", "podcast");
+
         SearchCommand = new AsyncRelayCommand(SearchAsync);
         DownloadEpisodeCommand = new RelayCommand(DownloadEpisodeItem);
         CancelTaskCommand = new RelayCommand(param =>
@@ -79,6 +89,20 @@ public class PodcastViewModel : ViewModelBase
         {
             PodcastService.Instance.ClearTasks();
         });
+        AddFolderCommand = new RelayCommand(PromptAddFolder);
+    }
+
+    private void PromptAddFolder()
+    {
+        var dialog = new Views.InputDialog("新增下載分類目錄", "請輸入新目錄名稱 (例如: 科技、慢跑):");
+        dialog.Owner = Application.Current.MainWindow;
+        if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.InputText))
+        {
+            var folderName = dialog.InputText.Trim();
+            DatabaseService.Instance.CreateFolder(folderName);
+            _ = _mainVM.RefreshFoldersAsync();
+            TargetFolder = folderName;
+        }
     }
 
     private async Task SearchAsync()
@@ -120,10 +144,13 @@ public class PodcastViewModel : ViewModelBase
     {
         if (param is PodcastEpisode ep)
         {
-            var target = string.IsNullOrWhiteSpace(TargetFolder) || TargetFolder == "全部歌曲" || TargetFolder == "全部目錄"
-                ? "podcast"
-                : TargetFolder.Trim();
+            if (string.IsNullOrWhiteSpace(TargetFolder))
+            {
+                MessageBox.Show("請先選擇下載目錄！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
+            var target = TargetFolder.Trim();
             PodcastService.Instance.StartDownload(ep, target, SelectedPodcast?.Artist ?? SelectedPodcast?.Title);
         }
     }

@@ -45,22 +45,28 @@ public class YouTubeDownloadService
 
     public void CancelTask(DownloadTask task)
     {
-        try
+        if (task.Status == "downloading" || task.Status == "queued" || task.Status == "processing")
         {
-            if (task.RunningProcess != null && !task.RunningProcess.HasExited)
+            try
             {
-                task.RunningProcess.Kill(true);
+                if (task.RunningProcess != null && !task.RunningProcess.HasExited)
+                {
+                    task.RunningProcess.Kill(true);
+                }
             }
-        }
-        catch { }
+            catch { }
 
-        task.Status = "cancelled";
-        task.Progress = "已取消下載";
+            task.Status = "cancelled";
+            task.Progress = "已取消下載";
+        }
     }
 
     public void DeleteTask(DownloadTask task)
     {
-        CancelTask(task);
+        if (task.Status == "downloading" || task.Status == "queued" || task.Status == "processing")
+        {
+            CancelTask(task);
+        }
         App.Current.Dispatcher.Invoke(() => Tasks.Remove(task));
     }
 
@@ -68,7 +74,10 @@ public class YouTubeDownloadService
     {
         foreach (var task in Tasks.ToList())
         {
-            CancelTask(task);
+            if (task.Status == "downloading" || task.Status == "queued" || task.Status == "processing")
+            {
+                CancelTask(task);
+            }
         }
         App.Current.Dispatcher.Invoke(() => Tasks.Clear());
     }

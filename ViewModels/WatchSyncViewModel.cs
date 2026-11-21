@@ -245,7 +245,7 @@ public class WatchSyncViewModel : ViewModelBase
         // Update local filter folders
         LocalFilterFolders.Clear();
         LocalFilterFolders.Add("全部目錄");
-        var folders = AllLocalTracks.Select(t => t.Folder).Where(f => !string.IsNullOrEmpty(f)).Distinct().OrderBy(f => f);
+        var folders = DatabaseService.Instance.GetAvailableTargetFolders();
         foreach (var f in folders) LocalFilterFolders.Add(f);
 
         if (string.IsNullOrEmpty(LocalFolderFilter) || !LocalFilterFolders.Contains(LocalFolderFilter))
@@ -316,16 +316,37 @@ public class WatchSyncViewModel : ViewModelBase
 
         // Group by Folder
         var groups = filteredList.GroupBy(t => string.IsNullOrEmpty(t.Folder) ? "音樂" : t.Folder)
-                                 .OrderBy(g => g.Key);
+                                 .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
         LocalFolderGroups.Clear();
-        foreach (var g in groups)
+
+        if (!string.IsNullOrEmpty(LocalFolderFilter) && LocalFolderFilter != "ALL" && LocalFolderFilter != "全部目錄")
         {
-            var tracks = g.ToList();
-            if (tracks.Count == 0) continue;
-            var groupVm = new LocalFolderGroup(g.Key);
-            foreach (var track in tracks) groupVm.Tracks.Add(track);
+            var groupVm = new LocalFolderGroup(LocalFolderFilter);
+            if (groups.TryGetValue(LocalFolderFilter, out var trackList))
+            {
+                foreach (var track in trackList) groupVm.Tracks.Add(track);
+            }
             LocalFolderGroups.Add(groupVm);
+        }
+        else
+        {
+            var allFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var f in LocalFilterFolders)
+            {
+                if (f != "全部目錄" && f != "全部歌曲") allFolders.Add(f);
+            }
+            foreach (var k in groups.Keys) allFolders.Add(k);
+
+            foreach (var f in allFolders.OrderBy(x => x))
+            {
+                var groupVm = new LocalFolderGroup(f);
+                if (groups.TryGetValue(f, out var trackList))
+                {
+                    foreach (var track in trackList) groupVm.Tracks.Add(track);
+                }
+                LocalFolderGroups.Add(groupVm);
+            }
         }
 
         UpdateCounts();
@@ -615,6 +636,7 @@ public class WatchSyncViewModel : ViewModelBase
                 {
                     Directory.CreateDirectory(targetDir);
                     _ = _mainVM.RefreshFoldersAsync();
+                    _ = LoadLocalTracksAsync();
                 }
             }
             catch (Exception ex)

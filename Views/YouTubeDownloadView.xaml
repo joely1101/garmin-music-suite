@@ -29,7 +29,7 @@
                 <!-- Options & Submit -->
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="260"/>
+                        <ColumnDefinition Width="280"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
@@ -37,9 +37,18 @@
                     <!-- Target Folder -->
                     <StackPanel Grid.Column="0" Margin="0,0,20,0">
                         <TextBlock Text="儲存目錄分類" FontSize="15" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8"/>
-                        <ComboBox Height="42" ItemsSource="{Binding Folders}" SelectedItem="{Binding TargetFolder}" 
-                                  IsEditable="True" Background="#0a0a0a" Foreground="{StaticResource BrushTextPrimary}"
-                                  BorderBrush="{StaticResource BrushCardBorder}" FontSize="16"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" Height="42" ItemsSource="{Binding Folders}" SelectedItem="{Binding TargetFolder}" 
+                                      Background="#0a0a0a" Foreground="{StaticResource BrushTextPrimary}"
+                                      BorderBrush="{StaticResource BrushCardBorder}" FontSize="16" VerticalContentAlignment="Center"/>
+                            <Button Grid.Column="1" Style="{StaticResource FlatButton}" Content="+" ToolTip="新增下載目錄"
+                                    Command="{Binding AddFolderCommand}" Height="42" Width="38" Margin="6,0,0,0" Padding="0"
+                                    FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </Grid>
                     </StackPanel>
 
                     <!-- Playlist Checkbox -->

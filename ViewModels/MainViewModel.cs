@@ -151,6 +151,7 @@ public class MainViewModel : ViewModelBase
                 TargetFolders.Add(folderName);
             }
             _ = RefreshFoldersAsync();
+            _ = WatchSyncVM.LoadLocalTracksAsync();
         }
     }
 }

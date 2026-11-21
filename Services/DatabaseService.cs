@@ -213,29 +213,51 @@ public class DatabaseService
     {
         return await Task.Run(() =>
         {
-            var folders = new List<FolderItem>();
+            var folderMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            // 1. Scan physical directories on disk in MusicDir
+            try
+            {
+                if (Directory.Exists(MusicDir))
+                {
+                    foreach (var dir in Directory.GetDirectories(MusicDir))
+                    {
+                        var dirName = Path.GetFileName(dir);
+                        if (!string.IsNullOrWhiteSpace(dirName))
+                        {
+                            folderMap[dirName] = 0;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // Ensure default folders
+            if (!folderMap.ContainsKey("音樂")) folderMap["音樂"] = 0;
+            if (!folderMap.ContainsKey("podcast")) folderMap["podcast"] = 0;
+
+            // 2. Query tracks count from SQLite database
+            int total = 0;
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
 
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT folder, COUNT(*) FROM tracks GROUP BY folder HAVING COUNT(*) > 0 ORDER BY folder ASC";
+            cmd.CommandText = "SELECT folder, COUNT(*) FROM tracks GROUP BY folder";
             using var reader = cmd.ExecuteReader();
-            int total = 0;
             while (reader.Read())
             {
                 var f = reader.GetString(0);
                 var c = reader.GetInt32(1);
-                if (c > 0)
-                {
-                    total += c;
-                    folders.Add(new FolderItem { Name = f, Count = c });
-                }
+                total += c;
+                folderMap[f] = c;
             }
 
-            if (total > 0)
-            {
-                folders.Insert(0, new FolderItem { Name = "全部歌曲", Count = total });
-            }
+            var folders = folderMap.Select(kvp => new FolderItem { Name = kvp.Key, Count = kvp.Value })
+                                   .OrderBy(f => f.Name)
+                                   .ToList();
+
+            // Insert "全部歌曲" at the top
+            folders.Insert(0, new FolderItem { Name = "全部歌曲", Count = total });
             return folders;
         });
     }
