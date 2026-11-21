@@ -353,7 +353,7 @@ public class MtpService
                 foreach (var file in Directory.GetFiles(musicDir, "*.*", SearchOption.AllDirectories))
                 {
                     var ext = Path.GetExtension(file).ToLowerInvariant();
-                    if (ext != ".mp3" && ext != ".m4a" && ext != ".aac" && ext != ".flac") continue;
+                    if (ext != ".mp3" && ext != ".m4a" && ext != ".aac" && ext != ".flac" && ext != ".m3u" && ext != ".m3u8") continue;
 
                     var rel = Path.GetRelativePath(musicDir, file).Replace('\\', '/');
                     var fi = new FileInfo(file);
@@ -361,7 +361,10 @@ public class MtpService
                     var artist = "Garmin Watch";
 
                     var folder = Path.GetDirectoryName(rel)?.Replace('\\', '/');
-                    if (string.IsNullOrEmpty(folder) || folder == ".") folder = "音樂";
+                    if (ext == ".m3u" || ext == ".m3u8" || string.IsNullOrEmpty(folder) || folder == "." || folder == "手錶音樂")
+                    {
+                        folder = "手機撥放清單";
+                    }
 
                     tracks.Add(new WatchTrack
                     {
@@ -417,9 +420,11 @@ public class MtpService
                                 if (parts.Length > 1) folder = parts[0];
                             }
 
-                            if (string.IsNullOrWhiteSpace(folder) || folder == ".")
+                            var ext = Path.GetExtension(name).ToLowerInvariant();
+                            var isPlaylist = ext == ".m3u" || ext == ".m3u8";
+                            if (isPlaylist || string.IsNullOrWhiteSpace(folder) || folder == "." || folder == "手錶音樂")
                             {
-                                folder = "手錶音樂";
+                                folder = "手機撥放清單";
                             }
 
                             var size = el.TryGetProperty("size", out var sp) ? sp.GetInt64() : 0;
@@ -729,5 +734,118 @@ public class MtpService
             }
             catch { return false; }
         }
+    }
+
+    public async Task<List<PlaylistEntry>> GetWatchPlaylistEntriesAsync(WatchDevice device, WatchTrack track)
+    {
+        var list = new List<PlaylistEntry>();
+        try
+        {
+            string[]? lines = null;
+            if (device.IsUsbDrive)
+            {
+                var musicDir = Path.Combine(device.DriveOrPath, "Music");
+                if (!Directory.Exists(musicDir)) musicDir = device.DriveOrPath;
+                var fullPath = Path.Combine(musicDir, track.RelPath);
+                if (!File.Exists(fullPath))
+                {
+                    fullPath = Path.Combine(device.DriveOrPath, track.RelPath);
+                }
+                if (File.Exists(fullPath))
+                {
+                    lines = await File.ReadAllLinesAsync(fullPath);
+                }
+            }
+            else
+            {
+                var cleanName = track.Title.Trim();
+                var cachedTemp = Path.Combine(Path.GetTempPath(), $"{cleanName}.m3u8");
+                if (File.Exists(cachedTemp))
+                {
+                    lines = await File.ReadAllLinesAsync(cachedTemp);
+                }
+                else
+                {
+                    string devName = device.Name;
+                    string subPath = "Internal Storage\\Music";
+                    var targetStr = device.DriveOrPath;
+                    if (targetStr.StartsWith("mtp:\\", StringComparison.OrdinalIgnoreCase) || targetStr.StartsWith("mtp:/", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var clean = targetStr.Substring(5).Replace('/', '\\').Trim('\\');
+                        var parts = clean.Split('\\', 2);
+                        if (parts.Length > 0) devName = parts[0];
+                        if (parts.Length > 1) subPath = parts[1];
+                    }
+
+                    var fileName = Path.GetFileName(track.RelPath);
+                    if (string.IsNullOrEmpty(fileName) || fileName.EndsWith("Music", StringComparison.OrdinalIgnoreCase))
+                    {
+                        fileName = $"{track.Title}.m3u8";
+                    }
+
+                    var tempDestDir = Path.GetTempPath().TrimEnd('\\');
+                    var psArgs = $"-Action copy_from_mtp -DeviceName \"{devName}\" -SubPath \"{subPath}\" -FileName \"{fileName}\" -DestDir \"{tempDestDir}\"";
+                    await RunPsCommandAsync(psArgs, timeoutMs: 15000);
+
+                    var downloadedFile = Path.Combine(tempDestDir, fileName);
+                    if (File.Exists(downloadedFile))
+                    {
+                        lines = await File.ReadAllLinesAsync(downloadedFile);
+                    }
+                }
+            }
+
+            if (lines != null)
+            {
+                list = ParseM3u8Content(lines);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error reading watch playlist: {ex.Message}");
+        }
+        return list;
+    }
+
+    public static List<PlaylistEntry> ParseM3u8Content(string[] lines)
+    {
+        var list = new List<PlaylistEntry>();
+        string currentTitle = "";
+        int index = 1;
+
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Trim();
+            if (string.IsNullOrEmpty(line)) continue;
+
+            if (line.StartsWith("#EXTINF:", StringComparison.OrdinalIgnoreCase))
+            {
+                var commaIdx = line.IndexOf(',');
+                if (commaIdx >= 0 && commaIdx < line.Length - 1)
+                {
+                    currentTitle = line.Substring(commaIdx + 1).Trim();
+                }
+            }
+            else if (line.StartsWith("#"))
+            {
+                continue;
+            }
+            else
+            {
+                var title = !string.IsNullOrEmpty(currentTitle)
+                    ? currentTitle
+                    : Path.GetFileNameWithoutExtension(line);
+
+                list.Add(new PlaylistEntry
+                {
+                    Index = index++,
+                    Title = title,
+                    FilePath = line
+                });
+                currentTitle = "";
+            }
+        }
+        return list;
+    }
     }
 }

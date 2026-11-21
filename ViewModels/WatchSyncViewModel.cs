@@ -94,6 +94,7 @@ public class WatchSyncViewModel : ViewModelBase
             {
                 foreach (var group in LocalFolderGroups)
                 {
+                    group.IsSelected = value;
                     foreach (var track in group.Tracks)
                     {
                         track.IsSelected = value;
@@ -113,6 +114,7 @@ public class WatchSyncViewModel : ViewModelBase
             {
                 foreach (var group in WatchFolderGroups)
                 {
+                    group.IsSelected = value;
                     foreach (var track in group.Tracks)
                     {
                         track.IsSelected = value;
@@ -132,11 +134,28 @@ public class WatchSyncViewModel : ViewModelBase
             if (SetField(ref _selectedLocalCount, value))
             {
                 OnPropertyChanged(nameof(HasSelectedLocal));
+                OnPropertyChanged(nameof(SelectedLocalDeleteText));
             }
         }
     }
 
-    public bool HasSelectedLocal => SelectedLocalCount > 0;
+    public bool HasSelectedLocal => SelectedLocalCount > 0 || LocalFolderGroups.Any(g => g.IsSelected);
+
+    public string SelectedLocalDeleteText
+    {
+        get
+        {
+            int tracks = SelectedLocalCount;
+            int emptyFolders = LocalFolderGroups.Where(g => g.IsSelected && g.TrackCount == 0).Count();
+            if (tracks > 0 && emptyFolders > 0)
+                return $"🗑 刪除 ({tracks} 首, {emptyFolders} 個目錄)";
+            if (tracks > 0)
+                return $"🗑 刪除 ({tracks})";
+            if (emptyFolders > 0)
+                return $"🗑 刪除 ({emptyFolders} 個目錄)";
+            return "🗑 刪除";
+        }
+    }
 
     private int _totalFilteredLocalCount;
     public int TotalFilteredLocalCount
@@ -184,9 +203,11 @@ public class WatchSyncViewModel : ViewModelBase
     public ICommand SyncSelectedCommand { get; }
     public ICommand DeleteTrackCommand { get; }
     public ICommand DeleteSelectedLocalCommand { get; }
+    public ICommand DeleteFolderCommand { get; }
     public ICommand RenameTrackCommand { get; }
     public ICommand DeleteWatchTrackCommand { get; }
     public ICommand DeleteSelectedWatchCommand { get; }
+    public ICommand ShowPlaylistDetailCommand { get; }
     public ICommand CreatePlaylistCommand { get; }
     public ICommand RefreshLocalCommand { get; }
     public ICommand RefreshWatchCommand { get; }
@@ -202,9 +223,11 @@ public class WatchSyncViewModel : ViewModelBase
         SyncSelectedCommand = new AsyncRelayCommand(SyncSelectedAsync);
         DeleteTrackCommand = new AsyncRelayCommand(DeleteLocalTrackAsync);
         DeleteSelectedLocalCommand = new AsyncRelayCommand(DeleteSelectedLocalAsync);
+        DeleteFolderCommand = new AsyncRelayCommand(DeleteFolderAsync);
         RenameTrackCommand = new RelayCommand(RenameLocalTrack);
         DeleteWatchTrackCommand = new AsyncRelayCommand(DeleteWatchTrackItemAsync);
         DeleteSelectedWatchCommand = new AsyncRelayCommand(DeleteSelectedWatchAsync);
+        ShowPlaylistDetailCommand = new AsyncRelayCommand(ShowPlaylistDetailAsync);
         CreatePlaylistCommand = new AsyncRelayCommand(CreatePlaylistFromSelectedAsync);
         RefreshLocalCommand = new AsyncRelayCommand(async () =>
         {
@@ -298,7 +321,8 @@ public class WatchSyncViewModel : ViewModelBase
         // Update watch filter folders
         WatchFilterFolders.Clear();
         WatchFilterFolders.Add("全部手錶目錄");
-        var folders = AllWatchTracks.Select(t => t.Folder).Where(f => !string.IsNullOrEmpty(f)).Distinct().OrderBy(f => f);
+        var folders = AllWatchTracks.Select(t => t.Folder).Where(f => !string.IsNullOrEmpty(f)).Distinct()
+            .OrderBy(f => f == "手機撥放清單" ? 0 : 1).ThenBy(f => f);
         foreach (var f in folders) WatchFilterFolders.Add(f);
 
         if (string.IsNullOrEmpty(WatchFolderFilter) || !WatchFilterFolders.Contains(WatchFolderFilter))
@@ -348,6 +372,10 @@ public class WatchSyncViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(LocalFolderFilter) && LocalFolderFilter != "ALL" && LocalFolderFilter != "全部目錄")
         {
             var groupVm = new LocalFolderGroup(LocalFolderFilter);
+            groupVm.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(LocalFolderGroup.IsSelected)) UpdateCounts();
+            };
             if (groups.TryGetValue(LocalFolderFilter, out var trackList))
             {
                 foreach (var track in trackList) groupVm.Tracks.Add(track);
@@ -366,6 +394,10 @@ public class WatchSyncViewModel : ViewModelBase
             foreach (var f in allFolders.OrderBy(x => x))
             {
                 var groupVm = new LocalFolderGroup(f);
+                groupVm.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(LocalFolderGroup.IsSelected)) UpdateCounts();
+                };
                 if (groups.TryGetValue(f, out var trackList))
                 {
                     foreach (var track in trackList) groupVm.Tracks.Add(track);
@@ -395,9 +427,10 @@ public class WatchSyncViewModel : ViewModelBase
         var filteredList = query.ToList();
         TotalFilteredWatchCount = filteredList.Count;
 
-        // Group by Folder
+        // Group by Folder: "手機撥放清單" is placed first!
         var groups = filteredList.GroupBy(t => string.IsNullOrEmpty(t.Folder) ? "音樂" : t.Folder)
-                                 .OrderBy(g => g.Key);
+                                 .OrderBy(g => g.Key == "手機撥放清單" ? 0 : 1)
+                                 .ThenBy(g => g.Key);
 
         WatchFolderGroups.Clear();
         foreach (var g in groups)
@@ -418,6 +451,7 @@ public class WatchSyncViewModel : ViewModelBase
         SelectedWatchCount = WatchFolderGroups.SelectMany(g => g.Tracks).Count(t => t.IsSelected);
         OnPropertyChanged(nameof(HasSelectedLocal));
         OnPropertyChanged(nameof(HasSelectedWatch));
+        OnPropertyChanged(nameof(SelectedLocalDeleteText));
     }
 
     private void PlayTrack(object? param)
@@ -533,16 +567,54 @@ public class WatchSyncViewModel : ViewModelBase
         }
     }
 
+    private async Task DeleteFolderAsync(object? param)
+    {
+        if (param is LocalFolderGroup group)
+        {
+            string prompt = group.TrackCount == 0
+                ? $"確定要刪除空目錄「{group.Name}」嗎？\n此動作將一併從電腦硬碟刪除該目錄。"
+                : $"確定要刪除目錄「{group.Name}」及其包含的 {group.TrackCount} 首歌曲嗎？\n此動作將一併從電腦硬碟刪除該目錄與歌曲檔案。";
+
+            if (MessageBox.Show(prompt, "確認刪除目錄", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            {
+                await DatabaseService.Instance.DeleteFolderAsync(group.Name);
+                await DatabaseService.Instance.ScanAndSyncFilesAsync();
+                await _mainVM.RefreshFoldersAsync();
+                await LoadLocalTracksAsync();
+            }
+        }
+    }
+
     private async Task DeleteSelectedLocalAsync()
     {
-        var selected = LocalFolderGroups.SelectMany(g => g.Tracks).Where(t => t.IsSelected).ToList();
-        if (selected.Count == 0) return;
+        var selectedTracks = LocalFolderGroups.SelectMany(g => g.Tracks).Where(t => t.IsSelected).ToList();
+        var selectedFolders = LocalFolderGroups.Where(g => g.IsSelected).ToList();
+        if (selectedTracks.Count == 0 && selectedFolders.Count == 0) return;
 
-        if (MessageBox.Show($"確定要從電腦刪除已勾選的 {selected.Count} 首歌曲嗎？", "確認批次刪除", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+        string prompt;
+        if (selectedTracks.Count == 0 && selectedFolders.Count > 0)
         {
-            foreach (var t in selected)
+            prompt = $"確定要刪除已勾選的 {selectedFolders.Count} 個目錄嗎？\n此動作將一併從電腦硬碟刪除目錄與檔案。";
+        }
+        else if (selectedTracks.Count > 0 && selectedFolders.Any(f => f.TrackCount == 0))
+        {
+            int emptyCount = selectedFolders.Count(f => f.TrackCount == 0);
+            prompt = $"確定要從電腦刪除已勾選的 {selectedTracks.Count} 首歌曲與 {emptyCount} 個空目錄嗎？";
+        }
+        else
+        {
+            prompt = $"確定要從電腦刪除已勾選的 {selectedTracks.Count} 首歌曲嗎？";
+        }
+
+        if (MessageBox.Show(prompt, "確認批次刪除", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+        {
+            foreach (var t in selectedTracks)
             {
                 await DatabaseService.Instance.DeleteTrackAsync(t.Id);
+            }
+            foreach (var g in selectedFolders)
+            {
+                await DatabaseService.Instance.DeleteFolderAsync(g.Name);
             }
             await DatabaseService.Instance.ScanAndSyncFilesAsync();
             await _mainVM.RefreshFoldersAsync();

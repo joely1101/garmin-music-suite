@@ -157,6 +157,15 @@ public class WatchTrack : INotifyPropertyChanged
         }
     }
 
+    public bool IsPlaylist =>
+        RelPath.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase) ||
+        RelPath.EndsWith(".m3u", StringComparison.OrdinalIgnoreCase) ||
+        Title.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase) ||
+        Title.EndsWith(".m3u", StringComparison.OrdinalIgnoreCase) ||
+        Folder == "手機撥放清單";
+
+    public string DisplayIcon => IsPlaylist ? "📋" : "🎵";
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -168,6 +177,13 @@ public class WatchTrack : INotifyPropertyChanged
         OnPropertyChanged(propertyName);
         return true;
     }
+}
+
+public class PlaylistEntry
+{
+    public int Index { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string FilePath { get; set; } = string.Empty;
 }
 
 public class WatchPlaylist

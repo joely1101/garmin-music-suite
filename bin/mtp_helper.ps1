@@ -5,7 +5,8 @@
     [string]$SourceFile = "",
     [string]$FileName = "",
     [string]$NewName = "",
-    [string]$FileListPath = ""
+    [string]$FileListPath = "",
+    [string]$DestDir = ""
 )
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -269,6 +270,39 @@ function Copy-FileToMTP {
     }
 }
 
+function Copy-FileFromMTP {
+    param([string]$DevName, [string]$RelPath, [string]$FileName, [string]$DestDir)
+    try {
+        $folder = Get-MTPFolderItem -DevName $DevName -RelPath $RelPath
+        if (!$folder) {
+            return [PSCustomObject]@{ success = $false; error = "找不到資料夾: $RelPath" }
+        }
+        $item = $folder.Items() | Where-Object { $_.Name.Trim() -eq $FileName.Trim() -or $_.Name -like "*$FileName*" } | Select-Object -First 1
+        if (!$item) {
+            return [PSCustomObject]@{ success = $false; error = "找不到檔案: $FileName" }
+        }
+
+        $shell = New-Object -ComObject Shell.Application
+        $dest = $shell.Namespace($DestDir)
+        if (!$dest) {
+            return [PSCustomObject]@{ success = $false; error = "本機目標目錄不存在: $DestDir" }
+        }
+
+        $dest.CopyHere($item, 16 + 512)
+        $destFile = Join-Path $DestDir $item.Name
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        while ($sw.ElapsedMilliseconds -lt 8000) {
+            if ([System.IO.File]::Exists($destFile) -and (Get-Item $destFile).Length -gt 0) {
+                break
+            }
+            Start-Sleep -Milliseconds 250
+        }
+        return [PSCustomObject]@{ success = [System.IO.File]::Exists($destFile); file = $destFile }
+    } catch {
+        return [PSCustomObject]@{ success = $false; error = $_.Exception.Message }
+    }
+}
+
 function Delete-FileFromMTP {
     param([string]$DevName, [string]$RelPath, [string]$FileName)
     $folder = Get-MTPFolderItem -DevName $DevName -RelPath $RelPath
@@ -366,7 +400,8 @@ function List-MTPFiles {
                 $ext = [System.IO.Path]::GetExtension($name).ToLower()
                 if ($ext -in @('.mp3', '.m4a', '.aac', '.flac', '.wav', '.wma', '.ogg', '.m3u', '.m3u8')) {
                     $sizeStr = $f.GetDetailsOf($item, 2)
-                    $folderName = if ($rel) { $rel.Split('\')[0] } else { "手錶音樂" }
+                    $isPlaylist = ($ext -eq '.m3u' -or $ext -eq '.m3u8')
+                    $folderName = if ($isPlaylist) { "手機撥放清單" } elseif ($rel) { $rel.Split('\')[0] } else { "手機撥放清單" }
                     $fileRel = if ($rel) { "$rel\$name" } else { $name }
                     $result += [PSCustomObject]@{
                         name        = $name
@@ -421,6 +456,10 @@ elseif ($Action -eq "list_folders") {
 }
 elseif ($Action -eq "copy_file") {
     $res = Copy-FileToMTP -DevName $DeviceName -RelPath $SubPath -SrcFile $SourceFile
+    $res | ConvertTo-Json -Compress
+}
+elseif ($Action -eq "copy_from_mtp") {
+    $res = Copy-FileFromMTP -DevName $DeviceName -RelPath $SubPath -FileName $FileName -DestDir $DestDir
     $res | ConvertTo-Json -Compress
 }
 elseif ($Action -eq "delete_file") {

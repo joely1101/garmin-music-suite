@@ -298,6 +298,36 @@ public class DatabaseService
         Directory.CreateDirectory(dir);
     }
 
+    public async Task DeleteFolderAsync(string folderName)
+    {
+        await Task.Run(() =>
+        {
+            var clean = string.Join("_", folderName.Split(Path.GetInvalidFileNameChars())).Trim();
+            if (string.IsNullOrEmpty(clean)) return;
+
+            // 1. Delete all tracks in this folder from database
+            using (var conn = new SqliteConnection(_connectionString))
+            {
+                conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "DELETE FROM tracks WHERE folder = @folder";
+                cmd.Parameters.AddWithValue("@folder", folderName);
+                cmd.ExecuteNonQuery();
+            }
+
+            // 2. Delete the physical directory on disk
+            var dir = Path.Combine(MusicDir, clean);
+            if (Directory.Exists(dir))
+            {
+                try
+                {
+                    Directory.Delete(dir, true);
+                }
+                catch { }
+            }
+        });
+    }
+
     public async Task DeleteTrackAsync(string trackId)
     {
         await Task.Run(() =>
