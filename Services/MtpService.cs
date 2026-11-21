@@ -742,7 +742,7 @@ public class MtpService
         try
         {
             string[]? lines = null;
-            if (device.IsUsbDrive)
+            if (!device.IsMtp)
             {
                 var musicDir = Path.Combine(device.DriveOrPath, "Music");
                 if (!Directory.Exists(musicDir)) musicDir = device.DriveOrPath;
@@ -846,6 +846,5 @@ public class MtpService
             }
         }
         return list;
-    }
     }
 }

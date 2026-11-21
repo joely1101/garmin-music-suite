@@ -97,11 +97,7 @@
                             <Button Style="{StaticResource FlatButton}" Padding="10,4" FontSize="14" Foreground="{StaticResource BrushDanger}"
                                     Command="{Binding DeleteSelectedLocalCommand}"
                                     Visibility="{Binding HasSelectedLocal, Converter={StaticResource BoolToVis}}">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="🗑 刪除 (" FontSize="14"/>
-                                    <TextBlock Text="{Binding SelectedLocalCount}" FontSize="14"/>
-                                    <TextBlock Text=")" FontSize="14"/>
-                                </StackPanel>
+                                <TextBlock Text="{Binding SelectedLocalDeleteText}" FontSize="14"/>
                             </Button>
                         </StackPanel>
                     </Grid>
@@ -124,6 +120,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
 
                                                 <!-- Toggle Arrow -->
@@ -143,8 +140,19 @@
                                                     <Run Text="]" Foreground="{StaticResource BrushTextMuted}" FontSize="14"/>
                                                 </TextBlock>
 
+                                                <!-- Delete Folder Button -->
+                                                <Button Grid.Column="4" Style="{StaticResource FlatButton}"
+                                                        Command="{Binding DataContext.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Padding="6,2" Margin="0,0,10,0" FontSize="12" Foreground="{StaticResource BrushDanger}"
+                                                        ToolTip="刪除此目錄">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="🗑 刪除目錄" FontSize="12"/>
+                                                    </StackPanel>
+                                                </Button>
+
                                                 <!-- Hint -->
-                                                <TextBlock Grid.Column="4" Text="{Binding ExpandTooltip}" FontSize="13" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                <TextBlock Grid.Column="5" Text="{Binding ExpandTooltip}" FontSize="13" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                             </Grid>
                                         </Border>
 
@@ -379,10 +387,11 @@
                                                                     <ColumnDefinition Width="*"/>
                                                                     <ColumnDefinition Width="Auto"/>
                                                                     <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="Auto"/>
                                                                 </Grid.ColumnDefinitions>
 
                                                                 <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                                <TextBlock Grid.Column="1" Text="🎵" FontSize="15" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding DisplayIcon}" FontSize="15" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
 
                                                                 <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
                                                                     <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Medium" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
@@ -392,7 +401,20 @@
                                                                 <TextBlock Grid.Column="3" Text="{Binding SizeFormatted}" FontSize="14" Foreground="{StaticResource BrushTextMuted}" 
                                                                            VerticalAlignment="Center" Margin="0,0,12,0" Width="75" TextAlignment="Right"/>
 
-                                                                <Button Grid.Column="4" Style="{StaticResource FlatButton}" Content="🗑 從手錶移除" Padding="8,3" FontSize="13" Foreground="{StaticResource BrushDanger}"
+                                                                <!-- Details Button for Playlist -->
+                                                                <Button Grid.Column="4" Style="{StaticResource FlatButton}" Padding="8,3" FontSize="13" Margin="0,0,8,0"
+                                                                        Foreground="{StaticResource BrushPrimaryOrange}"
+                                                                        Command="{Binding DataContext.ShowPlaylistDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Visibility="{Binding IsPlaylist, Converter={StaticResource BoolToVis}}"
+                                                                        ToolTip="查看播放清單內的歌曲清單">
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock Text="ℹ " FontSize="12"/>
+                                                                        <TextBlock Text="詳細資訊" FontSize="13"/>
+                                                                    </StackPanel>
+                                                                </Button>
+
+                                                                <Button Grid.Column="5" Style="{StaticResource FlatButton}" Content="🗑 從手錶移除" Padding="8,3" FontSize="13" Foreground="{StaticResource BrushDanger}"
                                                                         Command="{Binding DataContext.DeleteWatchTrackCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                         CommandParameter="{Binding}"/>
                                                             </Grid>
