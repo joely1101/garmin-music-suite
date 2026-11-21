@@ -91,7 +91,11 @@ function Detect-MTPGarminWatch {
 }
 
 function Get-MTPFolderItem {
-    param([string]$DevName, [string]$RelPath)
+    param(
+        [string]$DevName, 
+        [string]$RelPath,
+        [switch]$Create
+    )
     $shell = New-Object -ComObject Shell.Application
     $pc = $shell.NameSpace(17)
     $device = $pc.Items() | Where-Object { $_.Name.Trim() -eq $DevName.Trim() } | Select-Object -First 1
@@ -112,6 +116,13 @@ function Get-MTPFolderItem {
     foreach ($part in $parts) {
         if (!$part) { continue }
         $child = $folder.Items() | Where-Object { $_.Name.Trim() -eq $part.Trim() } | Select-Object -First 1
+        if (!$child -and $Create) {
+            try {
+                $folder.NewFolder($part.Trim())
+                Start-Sleep -Milliseconds 250
+                $child = $folder.Items() | Where-Object { $_.Name.Trim() -eq $part.Trim() } | Select-Object -First 1
+            } catch {}
+        }
         if (!$child) { return $null }
         $folder = $child.GetFolder
     }
@@ -128,11 +139,11 @@ function Get-MTPStorageInfo {
     $folder = $device.GetFolder
     if (!$folder) { return $null }
 
-    $parts = if ($RelPath) { $RelPath.Trim('\').Split('\') } else { @() }
-    $storagePart = if ($parts.Count -gt 0) { $parts[0] } else { "" }
+    $parts = if ($RelPath) { @($RelPath.Trim('\').Split('\')) } else { @() }
+    $storagePart = if ($parts.Count -gt 0) { [string]$parts[0] } else { "" }
     $storageItem = $null
     if ($storagePart) {
-        $storageItem = $folder.Items() | Where-Object { $_.Name.Trim() -eq $storagePart.Trim() } | Select-Object -First 1
+        $storageItem = $folder.Items() | Where-Object { [string]$_.Name.Trim() -eq $storagePart.Trim() } | Select-Object -First 1
     }
     if (!$storageItem) {
         $storageItem = $folder.Items() | Select-Object -First 1
@@ -192,9 +203,9 @@ function List-MTPSubfolders {
 
 function Copy-FileToMTP {
     param([string]$DevName, [string]$RelPath, [string]$SrcFile)
-    $folder = Get-MTPFolderItem -DevName $DevName -RelPath $RelPath
+    $folder = Get-MTPFolderItem -DevName $DevName -RelPath $RelPath -Create
     if (!$folder) {
-        return [PSCustomObject]@{ success = $false; error = "找不到目標資料夾: $RelPath" }
+        return [PSCustomObject]@{ success = $false; error = "找不到或無法建立目標資料夾: $RelPath" }
     }
     try {
         $folder.CopyHere($SrcFile, 16 + 512)
@@ -246,17 +257,61 @@ function List-MTPFiles {
     if (!$folder) {
         return @()
     }
-    $files = @()
-    foreach ($item in $folder.Items()) {
-        if (!$item.IsFolder) {
-            $files += [PSCustomObject]@{
-                name = $item.Name
-                size = $item.Size
-                path = "mtp:\$DevName\$RelPath\$($item.Name)"
+    
+    $fileList = New-Object System.Collections.ArrayList
+
+    function Recurse-Folder($curFolder, $currentRel) {
+        foreach ($item in $curFolder.Items()) {
+            if ($item.IsFolder) {
+                $subF = $null
+                try { $subF = $item.GetFolder } catch {}
+                if ($subF) {
+                    $subRel = if ($currentRel) { "$currentRel\$($item.Name)" } else { $item.Name }
+                    Recurse-Folder $subF $subRel
+                }
+            } else {
+                $name = $item.Name
+                $ext = [System.IO.Path]::GetExtension($name).ToLower()
+                if ($ext -in @('.mp3', '.m4a', '.aac', '.flac', '.wav', '.wma', '.ogg')) {
+                    $itemRel = if ($currentRel) { "$currentRel\$name" } else { $name }
+                    $fullPath = if ($RelPath) { "mtp:\$DevName\$RelPath\$itemRel" } else { "mtp:\$DevName\$itemRel" }
+                    
+                    $sizeVal = 0
+                    try { $sizeVal = [int64]$item.Size } catch {}
+                    $sizeStr = ""
+                    try { $sizeStr = $curFolder.GetDetailsOf($item, 2) } catch {}
+                    
+                    $title = ""
+                    try { $title = $curFolder.GetDetailsOf($item, 8) } catch {}
+                    $artist = ""
+                    try { $artist = $curFolder.GetDetailsOf($item, 9) } catch {}
+                    $duration = ""
+                    try { $duration = $curFolder.GetDetailsOf($item, 13) } catch {}
+
+                    $folderName = if ($currentRel) {
+                        $parts = $currentRel.Split('\')
+                        $parts[0]
+                    } else { "音樂" }
+
+                    $obj = [PSCustomObject]@{
+                        name        = $name
+                        path        = $fullPath
+                        rel_path    = $itemRel
+                        sub_folder  = $folderName
+                        size        = $sizeVal
+                        size_str    = $sizeStr
+                        title       = $title
+                        artist      = $artist
+                        duration    = $duration
+                    }
+                    [void]$fileList.Add($obj)
+                }
             }
         }
     }
-    return @($files)
+
+    Recurse-Folder $folder ""
+    return @($fileList)
 }
 
 if ($Action -eq "list_devices") {

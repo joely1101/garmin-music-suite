@@ -88,8 +88,8 @@ public class WatchDevice : INotifyPropertyChanged
             if (!IsConnected) return "手錶未連接";
             double freeGb = FreeBytes / (1024.0 * 1024.0 * 1024.0);
             double totalGb = TotalBytes / (1024.0 * 1024.0 * 1024.0);
-            string type = IsMtp ? "MTP" : DriveOrPath;
-            return $"{type} (剩餘 {freeGb:F2} GB / {totalGb:F1} GB)";
+            string devLabel = IsMtp ? Name : (string.IsNullOrEmpty(DriveOrPath) ? Name : DriveOrPath);
+            return $"{devLabel} (剩餘 {freeGb:F2} GB / {totalGb:F1} GB)";
         }
     }
 

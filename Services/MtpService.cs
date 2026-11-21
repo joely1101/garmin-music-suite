@@ -57,60 +57,189 @@ public class MtpService
         });
     }
 
+    public static long ParseSizeStringToBytes(string sizeStr)
+    {
+        if (string.IsNullOrWhiteSpace(sizeStr)) return 0;
+        try
+        {
+            var s = sizeStr.Trim();
+            double multiplier = 1;
+            if (s.EndsWith("GB", StringComparison.OrdinalIgnoreCase))
+            {
+                multiplier = 1024L * 1024L * 1024L;
+                s = s[..^2].Trim();
+            }
+            else if (s.EndsWith("MB", StringComparison.OrdinalIgnoreCase))
+            {
+                multiplier = 1024L * 1024L;
+                s = s[..^2].Trim();
+            }
+            else if (s.EndsWith("KB", StringComparison.OrdinalIgnoreCase))
+            {
+                multiplier = 1024L;
+                s = s[..^2].Trim();
+            }
+            else if (s.EndsWith("B", StringComparison.OrdinalIgnoreCase))
+            {
+                s = s[..^1].Trim();
+            }
+
+            if (double.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var num))
+            {
+                return (long)(num * multiplier);
+            }
+        }
+        catch { }
+        return 0;
+    }
+
+    public async Task<List<DetectedDevice>> GetAllDetectedDevicesAsync(string currentWatchPath)
+    {
+        var list = new List<DetectedDevice>();
+
+        // 1. Scan MTP Garmin devices
+        var mtpOutput = await RunPsCommandAsync("-Action detect_garmin");
+        if (!string.IsNullOrEmpty(mtpOutput))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(mtpOutput);
+                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var el in doc.RootElement.EnumerateArray())
+                    {
+                        var name = el.GetProperty("name").GetString() ?? "Garmin 手錶";
+                        var path = el.GetProperty("path").GetString() ?? "";
+                        var totalStr = el.TryGetProperty("total_str", out var tp) ? tp.GetString() ?? "" : "";
+                        var freeStr = el.TryGetProperty("free_str", out var fp) ? fp.GetString() ?? "" : "";
+                        var usedPct = el.TryGetProperty("used_pct", out var up) ? up.GetString() ?? "" : "";
+
+                        string storage = "";
+                        if (!string.IsNullOrEmpty(totalStr) || !string.IsNullOrEmpty(freeStr))
+                        {
+                            storage = $"容量: {totalStr} / 剩餘: {freeStr} ({usedPct})";
+                        }
+
+                        bool isSelected = !string.IsNullOrEmpty(currentWatchPath) &&
+                                          string.Equals(path.TrimEnd('\\', '/'), currentWatchPath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
+
+                        list.Add(new DetectedDevice
+                        {
+                            Name = name,
+                            Path = path,
+                            DeviceType = "Garmin MTP 手錶 (推薦)",
+                            StorageInfo = storage,
+                            IsMtp = true,
+                            IsSelected = isSelected
+                        });
+                    }
+                }
+            }
+            catch { }
+        }
+
+        // 2. Scan physical Drive Letters
+        try
+        {
+            foreach (var drive in DriveInfo.GetDrives())
+            {
+                if (!drive.IsReady) continue;
+                var root = drive.RootDirectory.FullName;
+                var garminXml = Path.Combine(root, "GARMIN", "GARMINDEVICE.XML");
+                var musicFolder = Path.Combine(root, "Music");
+                var label = drive.VolumeLabel;
+
+                bool isGarminDrive = label.Contains("GARMIN", StringComparison.OrdinalIgnoreCase) || File.Exists(garminXml);
+                bool isRemovable = drive.DriveType == DriveType.Removable;
+
+                if (isGarminDrive || isRemovable)
+                {
+                    var targetPath = Directory.Exists(musicFolder) ? musicFolder : root;
+                    double freeGb = drive.TotalFreeSpace / (1024.0 * 1024.0 * 1024.0);
+                    double totalGb = drive.TotalSize / (1024.0 * 1024.0 * 1024.0);
+                    string devType = isGarminDrive ? "Garmin 隨身碟/手錶" : "USB 隨身碟";
+
+                    bool isSelected = !string.IsNullOrEmpty(currentWatchPath) &&
+                                      (string.Equals(targetPath.TrimEnd('\\', '/'), currentWatchPath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase) ||
+                                       string.Equals(root.TrimEnd('\\', '/'), currentWatchPath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase));
+
+                    list.Add(new DetectedDevice
+                    {
+                        Name = string.IsNullOrEmpty(label) ? $"磁碟機 ({drive.Name.TrimEnd('\\')})" : $"{label} ({drive.Name.TrimEnd('\\')})",
+                        Path = targetPath,
+                        DeviceType = devType,
+                        StorageInfo = $"容量: {totalGb:F1} GB / 剩餘: {freeGb:F2} GB",
+                        IsMtp = false,
+                        IsSelected = isSelected
+                    });
+                }
+            }
+        }
+        catch { }
+
+        return list;
+    }
+
     public async Task<WatchDevice> DetectWatchAsync()
     {
         var device = new WatchDevice();
 
         // 1. Check custom path from settings
-        var customPath = DatabaseService.Instance.GetSetting("watch_custom_path", "");
-        if (!string.IsNullOrEmpty(customPath) && Directory.Exists(customPath))
+        var customPath = DatabaseService.Instance.GetSetting("watch_custom_path", "").Trim();
+        if (!string.IsNullOrEmpty(customPath))
         {
-            device.IsConnected = true;
-            device.DriveOrPath = customPath;
-            device.Name = $"自訂路徑 ({Path.GetFileName(customPath.TrimEnd('\\', '/'))})";
-            device.IsMtp = false;
-
-            try
+            if (customPath.StartsWith("mtp:\\", StringComparison.OrdinalIgnoreCase) || customPath.StartsWith("mtp:/", StringComparison.OrdinalIgnoreCase))
             {
-                var root = Path.GetPathRoot(customPath);
-                if (!string.IsNullOrEmpty(root))
+                var clean = customPath.Substring(5).Replace('/', '\\').Trim('\\');
+                var parts = clean.Split('\\');
+                var devName = parts[0];
+                var subPath = parts.Length > 1 ? string.Join("\\", parts.Skip(1)) : "Music";
+
+                device.IsConnected = true;
+                device.IsMtp = true;
+                device.Name = devName;
+                device.DriveOrPath = customPath;
+
+                var storageJson = await RunPsCommandAsync($"-Action get_storage -DeviceName \"{devName}\" -SubPath \"{subPath}\"");
+                if (!string.IsNullOrEmpty(storageJson))
                 {
-                    var di = new DriveInfo(root);
-                    device.TotalBytes = di.TotalSize;
-                    device.FreeBytes = di.TotalFreeSpace;
+                    try
+                    {
+                        using var sDoc = JsonDocument.Parse(storageJson);
+                        var sRoot = sDoc.RootElement;
+                        if (sRoot.TryGetProperty("total_str", out var tp))
+                            device.TotalBytes = ParseSizeStringToBytes(tp.GetString() ?? "");
+                        if (sRoot.TryGetProperty("free_str", out var fp))
+                            device.FreeBytes = ParseSizeStringToBytes(fp.GetString() ?? "");
+                    }
+                    catch { }
                 }
+                return device;
             }
-            catch { }
-            return device;
+            else if (Directory.Exists(customPath))
+            {
+                device.IsConnected = true;
+                device.DriveOrPath = customPath;
+                device.Name = $"自訂路徑 ({Path.GetFileName(customPath.TrimEnd('\\', '/'))})";
+                device.IsMtp = false;
+
+                try
+                {
+                    var root = Path.GetPathRoot(customPath);
+                    if (!string.IsNullOrEmpty(root))
+                    {
+                        var di = new DriveInfo(root);
+                        device.TotalBytes = di.TotalSize;
+                        device.FreeBytes = di.TotalFreeSpace;
+                    }
+                }
+                catch { }
+                return device;
+            }
         }
 
-        // 2. Scan standard Drive letters
-        foreach (var drive in DriveInfo.GetDrives())
-        {
-            if (!drive.IsReady) continue;
-            try
-            {
-                var root = drive.RootDirectory.FullName;
-                var garminXml = Path.Combine(root, "GARMIN", "GARMINDEVICE.XML");
-                var musicFolder = Path.Combine(root, "Music");
-                var label = drive.VolumeLabel.ToUpperInvariant();
-
-                if (label.Contains("GARMIN") || File.Exists(garminXml) || Directory.Exists(musicFolder))
-                {
-                    device.IsConnected = true;
-                    device.DriveOrPath = Directory.Exists(musicFolder) ? musicFolder : root;
-                    device.Name = string.IsNullOrEmpty(drive.VolumeLabel) ? $"磁碟機 ({drive.Name})" : $"{drive.VolumeLabel} ({drive.Name})";
-                    device.IsMtp = false;
-                    device.TotalBytes = drive.TotalSize;
-                    device.FreeBytes = drive.TotalFreeSpace;
-                    return device;
-                }
-            }
-            catch { }
-        }
-
-        // 3. Scan MTP Device
-        var mtpOutput = await RunPsCommandAsync("detect_garmin");
+        // 2. Scan MTP Device FIRST! (Priority: Real Garmin MTP Watch)
+        var mtpOutput = await RunPsCommandAsync("-Action detect_garmin");
         if (!string.IsNullOrEmpty(mtpOutput))
         {
             try
@@ -125,23 +254,37 @@ public class MtpService
                     device.DriveOrPath = first.GetProperty("path").GetString() ?? "";
                     device.IsMtp = true;
 
-                    // Fetch storage
-                    var storageOutput = await RunPsCommandAsync("get_storage");
-                    if (!string.IsNullOrEmpty(storageOutput))
-                    {
-                        try
-                        {
-                            using var sDoc = JsonDocument.Parse(storageOutput);
-                            var sRoot = sDoc.RootElement;
-                            if (sRoot.ValueKind == JsonValueKind.Array && sRoot.GetArrayLength() > 0)
-                            {
-                                var sFirst = sRoot[0];
-                                if (sFirst.TryGetProperty("total", out var tProp)) device.TotalBytes = tProp.GetInt64();
-                                if (sFirst.TryGetProperty("free", out var fProp)) device.FreeBytes = fProp.GetInt64();
-                            }
-                        }
-                        catch { }
-                    }
+                    if (first.TryGetProperty("total_str", out var tp))
+                        device.TotalBytes = ParseSizeStringToBytes(tp.GetString() ?? "");
+                    if (first.TryGetProperty("free_str", out var fp))
+                        device.FreeBytes = ParseSizeStringToBytes(fp.GetString() ?? "");
+
+                    return device;
+                }
+            }
+            catch { }
+        }
+
+        // 3. Scan standard Drive letters (Strict match: ONLY if label contains GARMIN or GARMINDEVICE.XML exists)
+        foreach (var drive in DriveInfo.GetDrives())
+        {
+            if (!drive.IsReady) continue;
+            try
+            {
+                var root = drive.RootDirectory.FullName;
+                var garminXml = Path.Combine(root, "GARMIN", "GARMINDEVICE.XML");
+                var musicFolder = Path.Combine(root, "Music");
+                var label = drive.VolumeLabel.ToUpperInvariant();
+
+                // Strict check: DO NOT match solely because "Music" directory exists!
+                if (label.Contains("GARMIN") || File.Exists(garminXml))
+                {
+                    device.IsConnected = true;
+                    device.DriveOrPath = Directory.Exists(musicFolder) ? musicFolder : root;
+                    device.Name = string.IsNullOrEmpty(drive.VolumeLabel) ? $"Garmin ({drive.Name})" : $"{drive.VolumeLabel} ({drive.Name})";
+                    device.IsMtp = false;
+                    device.TotalBytes = drive.TotalSize;
+                    device.FreeBytes = drive.TotalFreeSpace;
                     return device;
                 }
             }
@@ -169,8 +312,11 @@ public class MtpService
                 }
                 if (!Directory.Exists(musicDir)) return;
 
-                foreach (var file in Directory.GetFiles(musicDir, "*.mp3", SearchOption.AllDirectories))
+                foreach (var file in Directory.GetFiles(musicDir, "*.*", SearchOption.AllDirectories))
                 {
+                    var ext = Path.GetExtension(file).ToLowerInvariant();
+                    if (ext != ".mp3" && ext != ".m4a" && ext != ".aac" && ext != ".flac") continue;
+
                     var rel = Path.GetRelativePath(musicDir, file).Replace('\\', '/');
                     var fi = new FileInfo(file);
                     var title = Path.GetFileNameWithoutExtension(file);
@@ -192,7 +338,18 @@ public class MtpService
         }
         else
         {
-            var output = await RunPsCommandAsync("list_files");
+            string devName = device.Name;
+            string subPath = "Internal Storage\\Music";
+            var targetStr = device.DriveOrPath;
+            if (targetStr.StartsWith("mtp:\\", StringComparison.OrdinalIgnoreCase) || targetStr.StartsWith("mtp:/", StringComparison.OrdinalIgnoreCase))
+            {
+                var clean = targetStr.Substring(5).Replace('/', '\\').Trim('\\');
+                var parts = clean.Split('\\', 2);
+                devName = parts[0];
+                subPath = parts.Length > 1 ? parts[1] : "Internal Storage\\Music";
+            }
+
+            var output = await RunPsCommandAsync($"-Action list_files -DeviceName \"{devName}\" -SubPath \"{subPath}\"", timeoutMs: 40000);
             if (!string.IsNullOrEmpty(output))
             {
                 try
@@ -204,30 +361,46 @@ public class MtpService
                         {
                             var name = el.GetProperty("name").GetString() ?? "";
                             var path = el.GetProperty("path").GetString() ?? "";
+                            var relPath = el.TryGetProperty("rel_path", out var rp) ? rp.GetString() ?? name : name;
+                            var subFolder = el.TryGetProperty("sub_folder", out var sfp) ? sfp.GetString() ?? "音樂" : "音樂";
                             var size = el.TryGetProperty("size", out var sp) ? sp.GetInt64() : 0;
+                            var sizeStr = el.TryGetProperty("size_str", out var ssp) ? ssp.GetString() ?? "" : "";
+                            var title = el.TryGetProperty("title", out var tp) ? tp.GetString() ?? "" : "";
+                            var artist = el.TryGetProperty("artist", out var ap) ? ap.GetString() ?? "" : "";
 
-                            if (name.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
+                            if (size == 0 && !string.IsNullOrEmpty(sizeStr))
                             {
-                                var folder = "音樂";
-                                if (path.Contains("\\") || path.Contains("/"))
-                                {
-                                    var dir = Path.GetDirectoryName(path.Replace('/', '\\'));
-                                    if (!string.IsNullOrEmpty(dir)) folder = Path.GetFileName(dir);
-                                }
-
-                                tracks.Add(new WatchTrack
-                                {
-                                    Title = Path.GetFileNameWithoutExtension(name),
-                                    Artist = "Garmin MTP",
-                                    RelPath = path,
-                                    Folder = folder,
-                                    Size = size
-                                });
+                                size = ParseSizeStringToBytes(sizeStr);
                             }
+
+                            if (string.IsNullOrWhiteSpace(title))
+                            {
+                                title = Path.GetFileNameWithoutExtension(name);
+                            }
+                            if (string.IsNullOrWhiteSpace(artist))
+                            {
+                                artist = "Garmin 手錶";
+                            }
+                            if (string.IsNullOrWhiteSpace(subFolder) || subFolder == ".")
+                            {
+                                subFolder = "音樂";
+                            }
+
+                            tracks.Add(new WatchTrack
+                            {
+                                Title = title,
+                                Artist = artist,
+                                RelPath = path,
+                                Folder = subFolder,
+                                Size = size
+                            });
                         }
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Failed to parse MTP files list: {ex.Message}");
+                }
             }
         }
         return tracks;
@@ -293,18 +466,18 @@ public class MtpService
         {
             // MTP device copy
             string devName = device.Name;
-            string subPath = "Music";
+            string subPath = "Internal Storage\\Music";
             var targetStr = device.DriveOrPath;
             if (targetStr.StartsWith("mtp:\\", StringComparison.OrdinalIgnoreCase) || targetStr.StartsWith("mtp:/", StringComparison.OrdinalIgnoreCase))
             {
                 var clean = targetStr.Substring(5).Replace('/', '\\').Trim('\\');
                 var parts = clean.Split('\\', 2);
                 devName = parts[0];
-                subPath = parts.Length > 1 ? parts[1] : "Music";
+                subPath = parts.Length > 1 ? parts[1] : "Internal Storage\\Music";
             }
 
-            var folder = string.IsNullOrEmpty(track.Folder) ? "音樂" : track.Folder;
-            var targetSub = string.IsNullOrEmpty(subPath) ? folder : Path.Combine(subPath, folder);
+            var folder = (string.IsNullOrEmpty(track.Folder) || track.Folder == "全部歌曲") ? "" : track.Folder;
+            var targetSub = string.IsNullOrEmpty(folder) ? subPath : Path.Combine(subPath, folder);
 
             var res = await RunPsCommandAsync($"-Action copy_file -DeviceName \"{devName}\" -SubPath \"{targetSub}\" -SourceFile \"{localFile}\"", timeoutMs: 60000);
             return res.Contains("\"success\": true") || res.Contains("\"success\":true");
@@ -339,17 +512,21 @@ public class MtpService
         else
         {
             string devName = device.Name;
-            string subPath = "Music";
-            var targetStr = device.DriveOrPath;
-            if (targetStr.StartsWith("mtp:\\", StringComparison.OrdinalIgnoreCase) || targetStr.StartsWith("mtp:/", StringComparison.OrdinalIgnoreCase))
+            string subPath = "Internal Storage\\Music";
+            string fileName = Path.GetFileName(relOrFullPath);
+
+            if (relOrFullPath.StartsWith("mtp:\\", StringComparison.OrdinalIgnoreCase) || relOrFullPath.StartsWith("mtp:/", StringComparison.OrdinalIgnoreCase))
             {
-                var clean = targetStr.Substring(5).Replace('/', '\\').Trim('\\');
-                var parts = clean.Split('\\', 2);
-                devName = parts[0];
-                subPath = parts.Length > 1 ? parts[1] : "Music";
+                var clean = relOrFullPath.Substring(5).Replace('/', '\\').Trim('\\');
+                var parts = clean.Split('\\');
+                if (parts.Length >= 2)
+                {
+                    devName = parts[0];
+                    fileName = parts[^1];
+                    subPath = string.Join('\\', parts.Skip(1).Take(parts.Length - 2));
+                }
             }
 
-            var fileName = Path.GetFileName(relOrFullPath);
             var res = await RunPsCommandAsync($"-Action delete_file -DeviceName \"{devName}\" -SubPath \"{subPath}\" -FileName \"{fileName}\"", timeoutMs: 20000);
             return res.Contains("\"success\": true") || res.Contains("\"success\":true");
         }
@@ -370,22 +547,21 @@ public class MtpService
             lines.Add(filename);
         }
 
-        var m3u8Content = string.Join("\r\n", lines);
-
         if (!device.IsMtp)
         {
             return await Task.Run(() =>
             {
                 try
                 {
-                    var targetDir = device.DriveOrPath;
-                    if (!targetDir.EndsWith("Music", StringComparison.OrdinalIgnoreCase))
+                    var destBase = device.DriveOrPath;
+                    if (!destBase.EndsWith("Music", StringComparison.OrdinalIgnoreCase))
                     {
-                        var sub = Path.Combine(targetDir, "Music");
-                        if (Directory.Exists(sub)) targetDir = sub;
+                        var sub = Path.Combine(destBase, "Music");
+                        if (Directory.Exists(sub)) destBase = sub;
                     }
-                    var m3u8Path = Path.Combine(targetDir, $"{cleanName}.m3u8");
-                    File.WriteAllText(m3u8Path, m3u8Content, System.Text.Encoding.UTF8);
+
+                    var playlistFile = Path.Combine(destBase, $"{cleanName}.m3u8");
+                    File.WriteAllLines(playlistFile, lines, System.Text.Encoding.UTF8);
                     return true;
                 }
                 catch { return false; }
@@ -393,11 +569,28 @@ public class MtpService
         }
         else
         {
-            var tempFile = Path.Combine(Path.GetTempPath(), $"{cleanName}.m3u8");
-            File.WriteAllText(tempFile, m3u8Content, System.Text.Encoding.UTF8);
-            var res = await RunPsCommandAsync($"copy_to_watch -sourceFile \"{tempFile}\"");
-            try { File.Delete(tempFile); } catch { }
-            return res.Contains("\"status\": \"ok\"") || res.Contains("copied");
+            try
+            {
+                var tempFile = Path.Combine(Path.GetTempPath(), $"{cleanName}.m3u8");
+                await File.WriteAllLinesAsync(tempFile, lines, System.Text.Encoding.UTF8);
+
+                string devName = device.Name;
+                string subPath = "Internal Storage\\Music";
+                var targetStr = device.DriveOrPath;
+                if (targetStr.StartsWith("mtp:\\", StringComparison.OrdinalIgnoreCase) || targetStr.StartsWith("mtp:/", StringComparison.OrdinalIgnoreCase))
+                {
+                    var clean = targetStr.Substring(5).Replace('/', '\\').Trim('\\');
+                    var parts = clean.Split('\\', 2);
+                    devName = parts[0];
+                    subPath = parts.Length > 1 ? parts[1] : "Internal Storage\\Music";
+                }
+
+                var res = await RunPsCommandAsync($"-Action copy_file -DeviceName \"{devName}\" -SubPath \"{subPath}\" -SourceFile \"{tempFile}\"", timeoutMs: 20000);
+                try { File.Delete(tempFile); } catch { }
+
+                return res.Contains("\"success\": true") || res.Contains("\"success\":true");
+            }
+            catch { return false; }
         }
     }
 }

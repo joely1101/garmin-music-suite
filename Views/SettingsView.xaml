@@ -4,20 +4,135 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="900">
+             d:DesignHeight="750" d:DesignWidth="900">
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="0,0,10,0">
 
-            <!-- SECTION 1: WATCH DIRECTORY SETTINGS -->
+            <!-- SECTION 1: WATCH DIRECTORY & MTP DEVICE SETTINGS -->
             <Border Background="{StaticResource BrushCardBg}" BorderBrush="{StaticResource BrushCardBorder}" 
                     BorderThickness="1" CornerRadius="8" Padding="20" Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="手錶路徑與自訂設定" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <TextBlock Text="預設自動偵測 Garmin 磁碟代號 (如 D:\) 或 MTP 手錶裝置。若為網路分享路徑或非標準掛載，可手動指定路徑。" 
-                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,16"/>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                    <Grid Margin="0,0,0,10">
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="手錶路徑與 MTP 裝置設定" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock Text="支援 Garmin MTP 智慧手錶 (如 Forerunner 255/265/965、Fēnix 系列) 以及 USB 隨身碟模式。" 
+                                       FontSize="12" Foreground="{StaticResource BrushTextSecondary}"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="1" Style="{StaticResource FlatButton}" 
+                                Command="{Binding RefreshDevicesCommand}" Height="32" Padding="12,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⟳" FontSize="14" FontWeight="Bold" Margin="0,0,6,0"/>
+                                <TextBlock Text="重新整理裝置清單" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- DETECTED DEVICES LIST -->
+                    <TextBlock Text="系統偵測到的裝置：" FontSize="13" FontWeight="SemiBold" 
+                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+
+                    <ItemsControl ItemsSource="{Binding AvailableDevices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#1e1e1e" BorderBrush="{StaticResource BrushCardBorder}" 
+                                        BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Device Icon -->
+                                        <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" 
+                                                Background="#262626" BorderBrush="#3f3f46" BorderThickness="1"
+                                                VerticalAlignment="Center" Margin="0,0,12,0">
+                                            <TextBlock Text="⌚" FontSize="18" Foreground="{StaticResource BrushPrimaryOrange}" 
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- Device Info -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" 
+                                                           Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,8,0"/>
+                                                
+                                                <Border Background="#14532d" BorderBrush="#22c55e" BorderThickness="1" 
+                                                        CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DeviceType}" FontSize="10" FontWeight="SemiBold" Foreground="#86efac"/>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <TextBlock Text="{Binding Path}" FontSize="11" FontFamily="Consolas, Segoe UI" 
+                                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,3"/>
+                                            
+                                            <TextBlock Text="{Binding StorageInfo}" FontSize="11" 
+                                                       Foreground="{StaticResource BrushPrimaryOrange}"/>
+                                        </StackPanel>
+
+                                        <!-- Apply / Selected Button -->
+                                        <Button Grid.Column="2" VerticalAlignment="Center" Height="32" Padding="14,0"
+                                                Command="{Binding DataContext.SelectDeviceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource OrangeButton}">
+                                                    <Setter Property="Content" Value="選取此手錶"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="Content" Value="✓ 使用中"/>
+                                                            <Setter Property="Background" Value="#14532d"/>
+                                                            <Setter Property="BorderBrush" Value="#22c55e"/>
+                                                            <Setter Property="Foreground" Value="#86efac"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Empty state if no devices -->
+                    <Border Background="#171717" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="1" CornerRadius="6" 
+                            Padding="16" Margin="0,0,0,8">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding AvailableDevices.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="未偵測到任何連線手錶" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                            <TextBlock Text="請以 USB 傳輸線將手錶連接至電腦，並確保手錶已解鎖解除休眠。" 
+                                       FontSize="11" Foreground="#737373" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- TIP BOX -->
+                    <Border Background="#1c1917" BorderBrush="#78350f" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,8,0,16">
+                        <TextBlock Text="💡 提示：Garmin MTP 手錶 (如 Forerunner 255S Music) 為 Windows 專用 Shell 物件，Windows 傳統檔案總管的「瀏覽資料夾」對話框無法選取。請直接點擊上方清單中的「選取此手錶」即可立即切換！" 
+                                   FontSize="11" Foreground="#fb923c" TextWrapping="Wrap" LineHeight="16"/>
+                    </Border>
+
+                    <!-- MANUAL PATH INPUT -->
+                    <TextBlock Text="目前生效路徑 / 自訂手動輸入：" FontSize="13" FontWeight="SemiBold" 
+                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+
+                    <Grid Margin="0,0,0,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -27,7 +142,7 @@
                         <TextBox Text="{Binding CustomWatchPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="36" 
                                  VerticalContentAlignment="Center" Margin="0,0,10,0"/>
 
-                        <Button Grid.Column="1" Style="{StaticResource OrangeButton}" Content="瀏覽選取..." 
+                        <Button Grid.Column="1" Style="{StaticResource FlatButton}" Content="瀏覽資料夾... (限磁碟機)" 
                                 Command="{Binding BrowseWatchPathCommand}" Margin="0,0,8,0" Height="36" Padding="14,0"/>
 
                         <Button Grid.Column="2" Style="{StaticResource FlatButton}" Content="恢復自動偵測" 
