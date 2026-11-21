@@ -198,11 +198,6 @@ public class MtpService
                 var devName = parts[0];
                 var subPath = parts.Length > 1 ? string.Join("\\", parts.Skip(1)) : "Music";
 
-                device.IsConnected = true;
-                device.IsMtp = true;
-                device.Name = devName;
-                device.DriveOrPath = customPath;
-
                 var storageJson = await RunPsCommandAsync($"-Action get_storage -DeviceName \"{devName}\" -SubPath \"{subPath}\"");
                 if (!string.IsNullOrEmpty(storageJson))
                 {
@@ -210,34 +205,49 @@ public class MtpService
                     {
                         using var sDoc = JsonDocument.Parse(storageJson);
                         var sRoot = sDoc.RootElement;
+                        long total = 0, free = 0;
                         if (sRoot.TryGetProperty("total_str", out var tp))
-                            device.TotalBytes = ParseSizeStringToBytes(tp.GetString() ?? "");
+                            total = ParseSizeStringToBytes(tp.GetString() ?? "");
                         if (sRoot.TryGetProperty("free_str", out var fp))
-                            device.FreeBytes = ParseSizeStringToBytes(fp.GetString() ?? "");
+                            free = ParseSizeStringToBytes(fp.GetString() ?? "");
+
+                        // Only mark connected if storage info was successfully retrieved and device responded
+                        if (total > 0 || free > 0)
+                        {
+                            device.IsConnected = true;
+                            device.IsMtp = true;
+                            device.Name = devName;
+                            device.DriveOrPath = customPath;
+                            device.TotalBytes = total;
+                            device.FreeBytes = free;
+                            return device;
+                        }
                     }
                     catch { }
                 }
-                return device;
+                // Custom MTP device is disconnected/unplugged, fall through to auto-detect
             }
             else if (Directory.Exists(customPath))
             {
-                device.IsConnected = true;
-                device.DriveOrPath = customPath;
-                device.Name = $"自訂路徑 ({Path.GetFileName(customPath.TrimEnd('\\', '/'))})";
-                device.IsMtp = false;
-
                 try
                 {
                     var root = Path.GetPathRoot(customPath);
-                    if (!string.IsNullOrEmpty(root))
+                    if (!string.IsNullOrEmpty(root) && Directory.Exists(root))
                     {
                         var di = new DriveInfo(root);
-                        device.TotalBytes = di.TotalSize;
-                        device.FreeBytes = di.TotalFreeSpace;
+                        if (di.IsReady)
+                        {
+                            device.IsConnected = true;
+                            device.DriveOrPath = customPath;
+                            device.Name = $"自訂路徑 ({Path.GetFileName(customPath.TrimEnd('\\', '/'))})";
+                            device.IsMtp = false;
+                            device.TotalBytes = di.TotalSize;
+                            device.FreeBytes = di.TotalFreeSpace;
+                            return device;
+                        }
                     }
                 }
                 catch { }
-                return device;
             }
         }
 

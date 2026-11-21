@@ -233,7 +233,7 @@
                     <!-- Watch Hardware Storage Status Card -->
                     <Border Background="#101010" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="0,1,0,0" Padding="16,14">
                         <StackPanel>
-                            <Grid Margin="0,0,0,10">
+                            <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
@@ -243,7 +243,7 @@
                                     <Ellipse Width="10" Height="10" Margin="0,0,8,0">
                                         <Ellipse.Style>
                                             <Style TargetType="Ellipse">
-                                                <Setter Property="Fill" Value="#eab308"/>
+                                                <Setter Property="Fill" Value="#737373"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Watch.IsConnected}" Value="True">
                                                         <Setter Property="Fill" Value="#10b981"/>
@@ -255,8 +255,8 @@
                                     <TextBlock FontSize="15" FontWeight="SemiBold">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="等待手錶 USB 連線"/>
-                                                <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+                                                <Setter Property="Text" Value="手錶未連線"/>
+                                                <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Watch.IsConnected}" Value="True">
                                                         <Setter Property="Text" Value="Garmin 手錶已連線"/>
@@ -272,15 +272,28 @@
                                         Command="{Binding RefreshWatchCommand}" ToolTip="重新偵測手錶"/>
                             </Grid>
 
-                            <!-- Storage Info -->
-                            <Grid Margin="0,0,0,8" Visibility="{Binding Watch.IsConnected, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="{Binding Watch.DriveOrPath}" FontSize="13" Foreground="{StaticResource BrushTextMuted}" HorizontalAlignment="Left"/>
-                                <TextBlock Text="{Binding Watch.StorageDisplayText}" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Right"/>
-                            </Grid>
+                            <!-- Connected State: Name, Storage Info, and Progress Bar -->
+                            <StackPanel Visibility="{Binding Watch.IsConnected, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding Watch.Name}" FontSize="13" Foreground="{StaticResource BrushTextPrimary}" 
+                                           FontWeight="Medium" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                <TextBlock Text="{Binding Watch.StorageDisplayText}" FontSize="12" Foreground="{StaticResource BrushPrimaryOrange}" 
+                                           Margin="0,2,0,6" TextTrimming="CharacterEllipsis"/>
+                                <ProgressBar Value="{Binding Watch.UsedPercentage, Mode=OneWay}" Maximum="100" Height="6"/>
+                            </StackPanel>
 
-                            <!-- Storage Bar -->
-                            <ProgressBar Value="{Binding Watch.UsedPercentage, Mode=OneWay}" Maximum="100" Height="6"
-                                         Visibility="{Binding Watch.IsConnected, Converter={StaticResource BoolToVis}}"/>
+                            <!-- Disconnected State: USB hint -->
+                            <TextBlock Text="請連接手錶 USB 傳輸線" FontSize="12" Foreground="{StaticResource BrushTextMuted}" Margin="0,3,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Watch.IsConnected}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -324,11 +337,45 @@
 
                     <!-- Watch Connection Top Status Badge -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Background="#1f1811" BorderBrush="#59300a" BorderThickness="1" CornerRadius="18" Padding="14,6" Margin="0,0,12,0">
+                        <Border CornerRadius="18" Padding="14,6" Margin="0,0,12,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#171717"/>
+                                    <Setter Property="BorderBrush" Value="#262626"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Watch.IsConnected}" Value="True">
+                                            <Setter Property="Background" Value="#1f1811"/>
+                                            <Setter Property="BorderBrush" Value="#59300a"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="⌚ " FontSize="16" Foreground="{StaticResource BrushPrimaryOrange}"/>
-                                <TextBlock Text="{Binding Watch.StorageDisplayText}" FontSize="16" FontWeight="SemiBold" 
-                                           Foreground="{StaticResource BrushPrimaryOrange}"/>
+                                <TextBlock Text="⌚ " FontSize="16">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#737373"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Watch.IsConnected}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource BrushPrimaryOrange}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="{Binding Watch.StorageDisplayText}" FontSize="16" FontWeight="SemiBold">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Watch.IsConnected}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource BrushPrimaryOrange}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </StackPanel>
                         </Border>
 

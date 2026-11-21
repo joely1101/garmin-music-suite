@@ -78,14 +78,22 @@ public class WatchDevice : INotifyPropertyChanged
     public bool IsConnected
     {
         get => _isConnected;
-        set => SetField(ref _isConnected, value);
+        set
+        {
+            if (SetField(ref _isConnected, value))
+            {
+                OnPropertyChanged(nameof(StorageDisplayText));
+                OnPropertyChanged(nameof(UsedPercentage));
+                OnPropertyChanged(nameof(UsedBytes));
+            }
+        }
     }
 
     public string StorageDisplayText
     {
         get
         {
-            if (!IsConnected) return "手錶未連接";
+            if (!IsConnected) return "手錶未連線";
             double freeGb = FreeBytes / (1024.0 * 1024.0 * 1024.0);
             double totalGb = TotalBytes / (1024.0 * 1024.0 * 1024.0);
             string devLabel = IsMtp ? Name : (string.IsNullOrEmpty(DriveOrPath) ? Name : DriveOrPath);
