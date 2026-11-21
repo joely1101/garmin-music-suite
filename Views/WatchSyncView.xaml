@@ -140,10 +140,11 @@
                                                     <Run Text="]" Foreground="{StaticResource BrushTextMuted}" FontSize="14"/>
                                                 </TextBlock>
 
-                                                <!-- Delete Folder Button -->
+                                                <!-- Delete Folder Button (Only for custom folders, not default 音樂/podcast) -->
                                                 <Button Grid.Column="4" Style="{StaticResource FlatButton}"
                                                         Command="{Binding DataContext.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
+                                                        Visibility="{Binding CanDelete, Converter={StaticResource BoolToVis}}"
                                                         Padding="6,2" Margin="0,0,10,0" FontSize="12" Foreground="{StaticResource BrushDanger}"
                                                         ToolTip="刪除此目錄">
                                                     <StackPanel Orientation="Horizontal">

@@ -200,6 +200,19 @@ public class AudioPlayerService : ViewModelBase
         }
     }
 
+    public void Stop()
+    {
+        try
+        {
+            _timer.Stop();
+            _mediaPlayer.Stop();
+            _mediaPlayer.Close();
+            IsPlaying = false;
+            CurrentTrack = null;
+        }
+        catch { }
+    }
+
     public void TogglePlayPause()
     {
         if (IsPlaying)

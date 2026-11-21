@@ -47,6 +47,9 @@ public class LocalFolderGroup : ViewModelBase
 
     public ObservableCollection<Track> Tracks { get; } = new();
 
+    public bool CanDelete => !string.Equals(Name, "音樂", System.StringComparison.OrdinalIgnoreCase) && 
+                             !string.Equals(Name, "podcast", System.StringComparison.OrdinalIgnoreCase);
+
     public int TrackCount
     {
         get => Tracks.Count;
@@ -107,6 +110,9 @@ public class WatchFolderGroup : ViewModelBase
     }
 
     public ObservableCollection<WatchTrack> Tracks { get; } = new();
+
+    public bool CanDelete => !string.Equals(Name, "音樂", System.StringComparison.OrdinalIgnoreCase) && 
+                             !string.Equals(Name, "podcast", System.StringComparison.OrdinalIgnoreCase);
 
     public int TrackCount
     {

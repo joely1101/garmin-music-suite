@@ -302,28 +302,105 @@ public class DatabaseService
     {
         await Task.Run(() =>
         {
+            // Stop audio player in case any file in this folder is currently open/locked
+            try
+            {
+                AudioPlayerService.Instance.Stop();
+            }
+            catch { }
+
             var clean = string.Join("_", folderName.Split(Path.GetInvalidFileNameChars())).Trim();
             if (string.IsNullOrEmpty(clean)) return;
+
+            // Prevent deleting system default folders
+            if (string.Equals(clean, "音樂", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(clean, "podcast", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            LogService.Instance.LogInfo($"DeleteFolderAsync: Deleting folder '{folderName}' (clean: '{clean}')");
 
             // 1. Delete all tracks in this folder from database
             using (var conn = new SqliteConnection(_connectionString))
             {
                 conn.Open();
                 using var cmd = conn.CreateCommand();
-                cmd.CommandText = "DELETE FROM tracks WHERE folder = @folder";
+                cmd.CommandText = "DELETE FROM tracks WHERE folder = @folder OR folder = @clean";
                 cmd.Parameters.AddWithValue("@folder", folderName);
-                cmd.ExecuteNonQuery();
+                cmd.Parameters.AddWithValue("@clean", clean);
+                var deletedCount = cmd.ExecuteNonQuery();
+                LogService.Instance.LogInfo($"Deleted {deletedCount} tracks from DB for folder '{folderName}'");
             }
 
-            // 2. Delete the physical directory on disk
+            // 2. Clear saved folder setting if it was this folder
+            var lastYt = GetSetting("last_yt_target_folder", "");
+            if (string.Equals(lastYt, folderName, StringComparison.OrdinalIgnoreCase))
+            {
+                SetSetting("last_yt_target_folder", "音樂");
+            }
+            var lastPod = GetSetting("last_podcast_target_folder", "");
+            if (string.Equals(lastPod, folderName, StringComparison.OrdinalIgnoreCase))
+            {
+                SetSetting("last_podcast_target_folder", "podcast");
+            }
+
+            // 3. Delete the physical directory on disk safely
             var dir = Path.Combine(MusicDir, clean);
+            if (!Directory.Exists(dir))
+            {
+                // Try case-insensitive matching in case actual disk directory casing differs
+                var actualDir = Directory.GetDirectories(MusicDir)
+                    .FirstOrDefault(d => string.Equals(Path.GetFileName(d), clean, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(actualDir))
+                {
+                    dir = actualDir;
+                }
+            }
+
             if (Directory.Exists(dir))
             {
                 try
                 {
+                    // Clean readonly attributes on all files and subdirs to prevent UnauthorizedAccessException
+                    var di = new DirectoryInfo(dir);
+                    foreach (var file in di.GetFiles("*", SearchOption.AllDirectories))
+                    {
+                        try
+                        {
+                            file.Attributes = FileAttributes.Normal;
+                            file.Delete();
+                        }
+                        catch (Exception ex)
+                        {
+                            LogService.Instance.LogWarn($"DeleteFolderAsync: failed to delete file {file.FullName}: {ex.Message}");
+                        }
+                    }
+
+                    foreach (var subDir in di.GetDirectories("*", SearchOption.AllDirectories).OrderByDescending(d => d.FullName.Length))
+                    {
+                        try
+                        {
+                            subDir.Delete(true);
+                        }
+                        catch (Exception ex)
+                        {
+                            LogService.Instance.LogWarn($"DeleteFolderAsync: failed to delete subDir {subDir.FullName}: {ex.Message}");
+                        }
+                    }
+
                     Directory.Delete(dir, true);
+                    LogService.Instance.LogInfo($"DeleteFolderAsync: Successfully removed directory '{dir}' from disk.");
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    LogService.Instance.LogError($"DeleteFolderAsync: Failed to delete directory '{dir}': {ex.Message}", ex);
+                    throw;
+                }
+            }
+            else
+            {
+                LogService.Instance.LogWarn($"DeleteFolderAsync: Directory '{dir}' does not exist on disk.");
             }
         });
     }
@@ -332,6 +409,13 @@ public class DatabaseService
     {
         await Task.Run(() =>
         {
+            // Stop audio player in case this track is playing
+            try
+            {
+                AudioPlayerService.Instance.Stop();
+            }
+            catch { }
+
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
 
@@ -348,7 +432,15 @@ public class DatabaseService
                 var fullPath = Path.Combine(MusicDir, relPath);
                 if (File.Exists(fullPath))
                 {
-                    try { File.Delete(fullPath); } catch { }
+                    try
+                    {
+                        File.SetAttributes(fullPath, FileAttributes.Normal);
+                        File.Delete(fullPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogService.Instance.LogWarn($"Failed to delete file {fullPath}: {ex.Message}");
+                    }
                 }
             }
 

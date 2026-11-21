@@ -139,20 +139,20 @@ public class WatchSyncViewModel : ViewModelBase
         }
     }
 
-    public bool HasSelectedLocal => SelectedLocalCount > 0 || LocalFolderGroups.Any(g => g.IsSelected);
+    public bool HasSelectedLocal => SelectedLocalCount > 0 || LocalFolderGroups.Any(g => g.IsSelected && g.CanDelete);
 
     public string SelectedLocalDeleteText
     {
         get
         {
             int tracks = SelectedLocalCount;
-            int emptyFolders = LocalFolderGroups.Where(g => g.IsSelected && g.TrackCount == 0).Count();
-            if (tracks > 0 && emptyFolders > 0)
-                return $"🗑 刪除 ({tracks} 首, {emptyFolders} 個目錄)";
+            int deletableFolders = LocalFolderGroups.Where(g => g.IsSelected && g.CanDelete).Count();
+            if (tracks > 0 && deletableFolders > 0)
+                return $"🗑 刪除 ({tracks} 首, {deletableFolders} 個目錄)";
             if (tracks > 0)
                 return $"🗑 刪除 ({tracks})";
-            if (emptyFolders > 0)
-                return $"🗑 刪除 ({emptyFolders} 個目錄)";
+            if (deletableFolders > 0)
+                return $"🗑 刪除 ({deletableFolders} 個目錄)";
             return "🗑 刪除";
         }
     }
@@ -573,16 +573,35 @@ public class WatchSyncViewModel : ViewModelBase
     {
         if (param is LocalFolderGroup group)
         {
+            if (!group.CanDelete)
+            {
+                MessageBox.Show($"「{group.Name}」為系統預設目錄，無法刪除。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             string prompt = group.TrackCount == 0
                 ? $"確定要刪除空目錄「{group.Name}」嗎？\n此動作將一併從電腦硬碟刪除該目錄。"
                 : $"確定要刪除目錄「{group.Name}」及其包含的 {group.TrackCount} 首歌曲嗎？\n此動作將一併從電腦硬碟刪除該目錄與歌曲檔案。";
 
             if (MessageBox.Show(prompt, "確認刪除目錄", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                await DatabaseService.Instance.DeleteFolderAsync(group.Name);
-                await DatabaseService.Instance.ScanAndSyncFilesAsync();
-                await _mainVM.RefreshFoldersAsync();
-                await LoadLocalTracksAsync();
+                try
+                {
+                    await DatabaseService.Instance.DeleteFolderAsync(group.Name);
+
+                    if (string.Equals(LocalFolderFilter, group.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        LocalFolderFilter = "全部目錄";
+                    }
+
+                    await DatabaseService.Instance.ScanAndSyncFilesAsync();
+                    await _mainVM.RefreshFoldersAsync();
+                    await LoadLocalTracksAsync();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"刪除目錄失敗: {ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
     }
@@ -590,7 +609,7 @@ public class WatchSyncViewModel : ViewModelBase
     private async Task DeleteSelectedLocalAsync()
     {
         var selectedTracks = LocalFolderGroups.SelectMany(g => g.Tracks).Where(t => t.IsSelected).ToList();
-        var selectedFolders = LocalFolderGroups.Where(g => g.IsSelected).ToList();
+        var selectedFolders = LocalFolderGroups.Where(g => g.IsSelected && g.CanDelete).ToList();
         if (selectedTracks.Count == 0 && selectedFolders.Count == 0) return;
 
         string prompt;
@@ -598,10 +617,9 @@ public class WatchSyncViewModel : ViewModelBase
         {
             prompt = $"確定要刪除已勾選的 {selectedFolders.Count} 個目錄嗎？\n此動作將一併從電腦硬碟刪除目錄與檔案。";
         }
-        else if (selectedTracks.Count > 0 && selectedFolders.Any(f => f.TrackCount == 0))
+        else if (selectedTracks.Count > 0 && selectedFolders.Count > 0)
         {
-            int emptyCount = selectedFolders.Count(f => f.TrackCount == 0);
-            prompt = $"確定要從電腦刪除已勾選的 {selectedTracks.Count} 首歌曲與 {emptyCount} 個空目錄嗎？";
+            prompt = $"確定要從電腦刪除已勾選的 {selectedTracks.Count} 首歌曲與 {selectedFolders.Count} 個目錄嗎？";
         }
         else
         {
@@ -610,17 +628,32 @@ public class WatchSyncViewModel : ViewModelBase
 
         if (MessageBox.Show(prompt, "確認批次刪除", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
         {
-            foreach (var t in selectedTracks)
+            try
             {
-                await DatabaseService.Instance.DeleteTrackAsync(t.Id);
+                AudioPlayerService.Instance.Stop();
+
+                foreach (var t in selectedTracks)
+                {
+                    await DatabaseService.Instance.DeleteTrackAsync(t.Id);
+                }
+                foreach (var g in selectedFolders)
+                {
+                    await DatabaseService.Instance.DeleteFolderAsync(g.Name);
+                }
+
+                if (selectedFolders.Any(g => string.Equals(g.Name, LocalFolderFilter, StringComparison.OrdinalIgnoreCase)))
+                {
+                    LocalFolderFilter = "全部目錄";
+                }
+
+                await DatabaseService.Instance.ScanAndSyncFilesAsync();
+                await _mainVM.RefreshFoldersAsync();
+                await LoadLocalTracksAsync();
             }
-            foreach (var g in selectedFolders)
+            catch (Exception ex)
             {
-                await DatabaseService.Instance.DeleteFolderAsync(g.Name);
+                MessageBox.Show($"批次刪除失敗: {ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-            await DatabaseService.Instance.ScanAndSyncFilesAsync();
-            await _mainVM.RefreshFoldersAsync();
-            await LoadLocalTracksAsync();
         }
     }
 
