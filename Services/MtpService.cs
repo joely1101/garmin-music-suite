@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using GarminMusicStudio.Models;
@@ -541,6 +542,73 @@ public class MtpService
 
             var res = await RunPsCommandAsync($"-Action delete_file -DeviceName \"{devName}\" -SubPath \"{subPath}\" -FileName \"{fileName}\"", timeoutMs: 20000);
             return res.Contains("\"success\": true") || res.Contains("\"success\":true");
+        }
+    }
+
+    public async Task<bool> DeleteWatchTracksBatchAsync(WatchDevice device, List<string> relOrFullPaths)
+    {
+        if (!device.IsConnected || relOrFullPaths.Count == 0) return false;
+
+        if (!device.IsMtp)
+        {
+            return await Task.Run(() =>
+            {
+                bool any = false;
+                foreach (var relOrFullPath in relOrFullPaths)
+                {
+                    try
+                    {
+                        var target = relOrFullPath;
+                        if (!File.Exists(target))
+                        {
+                            target = Path.Combine(device.DriveOrPath, relOrFullPath.Replace('/', '\\'));
+                        }
+                        if (File.Exists(target))
+                        {
+                            File.Delete(target);
+                            any = true;
+                        }
+                    }
+                    catch { }
+                }
+                return any;
+            });
+        }
+        else
+        {
+            string devName = device.Name;
+            var fileItems = new List<object>();
+
+            foreach (var relOrFullPath in relOrFullPaths)
+            {
+                string subPath = "Internal Storage\\Music";
+                string fileName = Path.GetFileName(relOrFullPath);
+
+                if (relOrFullPath.StartsWith("mtp:\\", StringComparison.OrdinalIgnoreCase) || relOrFullPath.StartsWith("mtp:/", StringComparison.OrdinalIgnoreCase))
+                {
+                    var clean = relOrFullPath.Substring(5).Replace('/', '\\').Trim('\\');
+                    var parts = clean.Split('\\');
+                    if (parts.Length >= 2)
+                    {
+                        devName = parts[0];
+                        fileName = parts[^1];
+                        subPath = string.Join('\\', parts.Skip(1).Take(parts.Length - 2));
+                    }
+                }
+                fileItems.Add(new { SubPath = subPath, FileName = fileName });
+            }
+
+            var tempFile = Path.Combine(Path.GetTempPath(), $"garmin_del_{Guid.NewGuid():N}.json");
+            try
+            {
+                await File.WriteAllTextAsync(tempFile, JsonSerializer.Serialize(fileItems), Encoding.UTF8);
+                var res = await RunPsCommandAsync($"-Action delete_files -DeviceName \"{devName}\" -FileListPath \"{tempFile}\"", timeoutMs: 120000);
+                return res.Contains("\"success\": true") || res.Contains("\"success\":true");
+            }
+            finally
+            {
+                try { File.Delete(tempFile); } catch { }
+            }
         }
     }
 

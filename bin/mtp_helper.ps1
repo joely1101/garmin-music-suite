@@ -4,7 +4,8 @@
     [string]$SubPath = "",
     [string]$SourceFile = "",
     [string]$FileName = "",
-    [string]$NewName = ""
+    [string]$NewName = "",
+    [string]$FileListPath = ""
 )
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -286,6 +287,44 @@ function Delete-FileFromMTP {
     }
 }
 
+function Delete-FilesBatch {
+    param([string]$DevName, [string]$FileListPath)
+    if (!(Test-Path $FileListPath)) {
+        return [PSCustomObject]@{ success = $false; error = "找不到檔案清單: $FileListPath" }
+    }
+    
+    $json = [System.IO.File]::ReadAllText($FileListPath, [System.Text.Encoding]::UTF8)
+    $files = $json | ConvertFrom-Json
+    $results = @()
+    $folderCache = @{}
+
+    foreach ($itemInfo in $files) {
+        $sub = $itemInfo.SubPath
+        $name = $itemInfo.FileName
+        if (!$folderCache.ContainsKey($sub)) {
+            $folderCache[$sub] = Get-MTPFolderItem -DevName $DevName -RelPath $sub
+        }
+        $folder = $folderCache[$sub]
+        if ($folder) {
+            $item = $folder.Items() | Where-Object { $_.Name -eq $name } | Select-Object -First 1
+            if ($item) {
+                try {
+                    $item.InvokeVerb("delete")
+                    $results += [PSCustomObject]@{ name = $name; success = $true }
+                } catch {
+                    $results += [PSCustomObject]@{ name = $name; success = $false; error = $_.Exception.Message }
+                }
+            } else {
+                $results += [PSCustomObject]@{ name = $name; success = $false; error = "找不到檔案" }
+            }
+        } else {
+            $results += [PSCustomObject]@{ name = $name; success = $false; error = "找不到資料夾" }
+        }
+    }
+    
+    return [PSCustomObject]@{ success = $true; total = $files.Count; deleted = ($results | Where-Object { $_.success }).Count }
+}
+
 function Rename-FileInMTP {
     param([string]$DevName, [string]$RelPath, [string]$FileName, [string]$NewName)
     $folder = Get-MTPFolderItem -DevName $DevName -RelPath $RelPath
@@ -386,6 +425,10 @@ elseif ($Action -eq "copy_file") {
 }
 elseif ($Action -eq "delete_file") {
     $res = Delete-FileFromMTP -DevName $DeviceName -RelPath $SubPath -FileName $FileName
+    $res | ConvertTo-Json -Compress
+}
+elseif ($Action -eq "delete_files") {
+    $res = Delete-FilesBatch -DevName $DeviceName -FileListPath $FileListPath
     $res | ConvertTo-Json -Compress
 }
 elseif ($Action -eq "rename_file") {

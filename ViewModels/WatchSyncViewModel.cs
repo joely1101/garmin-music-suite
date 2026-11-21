@@ -519,6 +519,7 @@ public class WatchSyncViewModel : ViewModelBase
         {
             if (MessageBox.Show($"確定要從手錶中刪除歌曲「{wt.Title}」嗎？", "確認刪除", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
+                using var watcher = AutoConfirmWatcher.Start();
                 var ok = await MtpService.Instance.DeleteWatchTrackAsync(_mainVM.Watch, wt.RelPath);
                 if (ok)
                 {
@@ -539,10 +540,9 @@ public class WatchSyncViewModel : ViewModelBase
 
         if (MessageBox.Show($"確定要從手錶刪除已勾選的 {selected.Count} 首歌曲嗎？", "確認批次刪除", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
         {
-            foreach (var wt in selected)
-            {
-                await MtpService.Instance.DeleteWatchTrackAsync(_mainVM.Watch, wt.RelPath);
-            }
+            using var watcher = AutoConfirmWatcher.Start();
+            var paths = selected.Select(wt => wt.RelPath).ToList();
+            await MtpService.Instance.DeleteWatchTracksBatchAsync(_mainVM.Watch, paths);
             await _mainVM.RefreshWatchStatusAsync();
         }
     }
