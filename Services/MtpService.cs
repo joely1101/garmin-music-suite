@@ -612,6 +612,27 @@ public class MtpService
         }
     }
 
+    public static string GetMusicRelativePath(string path)
+    {
+        var clean = path.Replace('\\', '/');
+        var musicIdx = clean.IndexOf("/Music/", StringComparison.OrdinalIgnoreCase);
+        if (musicIdx >= 0)
+        {
+            return clean.Substring(musicIdx + 7).TrimStart('/');
+        }
+        if (clean.StartsWith("mtp:", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = clean.Split('/');
+            var mIdx = Array.FindLastIndex(parts, p => p.Equals("Music", StringComparison.OrdinalIgnoreCase));
+            if (mIdx >= 0 && mIdx < parts.Length - 1)
+            {
+                return string.Join('/', parts.Skip(mIdx + 1));
+            }
+            return parts[^1];
+        }
+        return clean.TrimStart('/');
+    }
+
     public async Task<bool> SaveWatchPlaylistAsync(WatchDevice device, string playlistName, List<string> trackRelPaths)
     {
         if (!device.IsConnected) return false;
@@ -622,9 +643,10 @@ public class MtpService
         var lines = new List<string> { "#EXTM3U", $"#PLAYLIST:{cleanName}" };
         foreach (var p in trackRelPaths)
         {
-            var filename = Path.GetFileName(p);
-            lines.Add($"#EXTINF:-1,{Path.GetFileNameWithoutExtension(filename)}");
-            lines.Add(filename);
+            var cleanPath = GetMusicRelativePath(p);
+            var title = Path.GetFileNameWithoutExtension(cleanPath);
+            lines.Add($"#EXTINF:-1,{title}");
+            lines.Add(cleanPath);
         }
 
         if (!device.IsMtp)

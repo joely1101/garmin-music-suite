@@ -549,18 +549,41 @@ public class WatchSyncViewModel : ViewModelBase
 
     private async Task CreatePlaylistFromSelectedAsync()
     {
-        var selected = LocalFolderGroups.SelectMany(g => g.Tracks).Where(t => t.IsSelected).ToList();
-        if (selected.Count == 0)
+        var selectedWatch = WatchFolderGroups.SelectMany(g => g.Tracks).Where(t => t.IsSelected).ToList();
+        var selectedLocal = LocalFolderGroups.SelectMany(g => g.Tracks).Where(t => t.IsSelected).ToList();
+
+        List<string> relPaths = new();
+        string sourceDesc = "";
+
+        if (selectedWatch.Count > 0 && selectedLocal.Count > 0)
         {
-            MessageBox.Show("請先勾選欲加入播放清單的歌曲！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            relPaths = selectedWatch.Select(t => t.RelPath)
+                       .Concat(selectedLocal.Select(t => t.RelPath))
+                       .Distinct()
+                       .ToList();
+            sourceDesc = $"已勾選的 {relPaths.Count} 首歌曲 (手錶 {selectedWatch.Count} 首 + 電腦 {selectedLocal.Count} 首)";
+        }
+        else if (selectedWatch.Count > 0)
+        {
+            relPaths = selectedWatch.Select(t => t.RelPath).ToList();
+            sourceDesc = $"手錶已勾選的 {selectedWatch.Count} 首歌曲";
+        }
+        else if (selectedLocal.Count > 0)
+        {
+            relPaths = selectedLocal.Select(t => t.RelPath).ToList();
+            sourceDesc = $"電腦已勾選的 {selectedLocal.Count} 首歌曲";
+        }
+        else
+        {
+            MessageBox.Show("請先勾選欲加入播放清單的歌曲！\n（可從上方「電腦音樂庫」或下方「Garmin 手錶音樂庫」勾選歌曲）", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
-        var dialog = new Views.InputDialog("手錶播放清單", "請輸入播放清單名稱 (例如: 跑步訓練):");
+        var dialog = new Views.InputDialog("手錶播放清單", $"已選取 {sourceDesc}。\n請輸入播放清單名稱 (例如: 跑步訓練):");
         if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.InputText))
         {
             var name = dialog.InputText.Trim();
-            var relPaths = selected.Select(t => t.RelPath).ToList();
+            using var watcher = AutoConfirmWatcher.Start();
             var ok = await MtpService.Instance.SaveWatchPlaylistAsync(_mainVM.Watch, name, relPaths);
             if (ok)
             {
