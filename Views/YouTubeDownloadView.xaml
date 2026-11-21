@@ -19,7 +19,10 @@
             <StackPanel>
                 <TextBlock Text="下載 YouTube 音訊至電腦" FontSize="24" FontWeight="SemiBold"/>
                 <TextBlock Text="自動轉碼為 Garmin 手錶專用規格（192kbps、44.1kHz Stereo、ID3v2.3 標籤），保證手錶硬體即時播放。" 
-                           FontSize="15" Foreground="{StaticResource BrushTextSecondary}" Margin="0,5,0,22"/>
+                           FontSize="15" Foreground="{StaticResource BrushTextSecondary}" Margin="0,5,0,12"/>
+
+                <TextBlock Text="{Binding DependencyStatus}" FontSize="13" Foreground="{StaticResource BrushPrimaryOrange}" 
+                           Margin="0,0,0,16" TextWrapping="Wrap"/>
 
                 <!-- URL Input -->
                 <TextBlock Text="YouTube 影片或音樂網址" FontSize="15" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8"/>

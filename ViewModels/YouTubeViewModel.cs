@@ -14,6 +14,13 @@ public class YouTubeViewModel : ViewModelBase
     private string _targetFolder = "音樂";
     private bool _downloadPlaylist;
     private bool _isDownloading;
+    private string _dependencyStatus = string.Empty;
+
+    public string DependencyStatus
+    {
+        get => _dependencyStatus;
+        set => SetField(ref _dependencyStatus, value);
+    }
 
     public string Url
     {
@@ -74,6 +81,11 @@ public class YouTubeViewModel : ViewModelBase
             YouTubeDownloadService.Instance.ClearTasks();
         });
         AddFolderCommand = new RelayCommand(PromptAddFolder);
+
+        DependencyService.Instance.OnStatusChanged += (msg) =>
+        {
+            App.Current?.Dispatcher?.Invoke(() => DependencyStatus = msg);
+        };
     }
 
     private void PromptAddFolder()

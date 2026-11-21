@@ -124,6 +124,9 @@ public class MainViewModel : ViewModelBase
 
     public async Task InitializeAsync()
     {
+        // Automatically check and complement missing bin dependencies (yt-dlp, ffmpeg) in background
+        _ = Task.Run(async () => await DependencyService.Instance.EnsureDependenciesAsync());
+
         await DatabaseService.Instance.ScanAndSyncFilesAsync();
         await RefreshFoldersAsync();
         await WatchSyncVM.LoadLocalTracksAsync();

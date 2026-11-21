@@ -69,7 +69,11 @@ jobs:
           # 1. Standalone single-file .exe
           Copy-Item "release_output/GarminMusicStudio.exe" "release_assets/GarminMusicStudio.exe"
           
-          # 2. Complete portable zip bundle (including bin/ dependencies: ffmpeg, ffprobe, yt-dlp, mtp_helper.ps1)
+          # 2. Individual helper binaries for direct download / auto-download
+          Copy-Item "bin/yt-dlp.exe" "release_assets/yt-dlp.exe"
+          Copy-Item "bin/ffmpeg.exe" "release_assets/ffmpeg.exe"
+          
+          # 3. Complete portable zip bundle (including bin/ dependencies: ffmpeg, ffprobe, yt-dlp, mtp_helper.ps1)
           New-Item -ItemType Directory -Force -Path "bundle/GarminMusicStudio/bin"
           Copy-Item "release_output/GarminMusicStudio.exe" "bundle/GarminMusicStudio/"
           Copy-Item "bin/*" "bundle/GarminMusicStudio/bin/" -Recurse -Force
@@ -97,18 +101,20 @@ jobs:
           body: |
             ## Garmin Music Studio ${{ env.TAG_NAME }}
             
-            ### 發行內容說明 / Release Notes
-            - **GarminMusicStudio.exe**: 單一獨立執行檔 (無需安裝 .NET，隨開即用)。
-            - **GarminMusicStudio-win-x64-bundle.zip**: 完整綠色便攜包（內含本機 MTP 傳輸腳本、YouTube 音樂下載器 `yt-dlp` 與 `ffmpeg` 音訊轉換組件）。
+            ### 📦 下載與檔案說明 / Release Assets
+            - **GarminMusicStudio-win-x64-bundle.zip (強烈推薦)**：完整免安裝便攜包，已預先包裝所有音訊轉換工具與組件（`bin/ffmpeg.exe`、`bin/yt-dlp.exe`、`bin/mtp_helper.ps1`），解壓縮後即可完整離線使用！
+            - **GarminMusicStudio.exe**：單一獨立執行檔。若使用此單檔，程式在首次啟動時會**自動偵測並從官方來源自動補齊** `bin/` 目錄缺少的 `yt-dlp.exe` 與 `ffmpeg.exe`；您亦可直接下載下方提供的 `ffmpeg.exe` 與 `yt-dlp.exe` 放入同層的 `bin/` 目錄。
+            - **ffmpeg.exe / yt-dlp.exe**：音訊轉檔與 YouTube 下載依賴組件。
             
-            ### v1.0.1 新增與優化項目
+            ### ✨ v1.0.1 新增與優化項目
+            - **自動補齊 bin 目錄組件**：單檔 .exe 執行時若缺少 yt-dlp 或 ffmpeg，將自動在背景補齊下載，解決組件遺失問題。
             - **電腦音樂庫空目錄管理**：支援勾選空目錄進行批次刪除，並在每個目錄列新增「🗑 刪除目錄」快捷按鍵。
             - **手錶「手機撥放清單」目錄**：將手錶根目錄的 .m3u8 播放清單整合為「手機撥放清單」並預設置頂於第一位。
             - **播放清單「詳細資訊」彈窗**：點擊播放清單旁詳細資訊按鈕，即可檢視播放清單內所有歌曲與路徑。
             - **Podcast 與 YouTube 下載任務管理**：新增下載任務清單，支援即時取消、刪除任務與一鍵清空，且刪除任務保留實體檔案。
             - **目錄記憶與資料夾開啟**：記憶上次選取的下載目錄，並提供一鍵以檔案總管開啟電腦音樂庫功能。
             
-            ### 主要核心功能
+            ### 🎵 主要核心功能
             - 支援 Garmin 手錶（Forerunner 255/265/965、Fēnix 系列等）MTP 隨插即連與同步
             - 智慧手錶目錄分類與雙向歌單維護
             - 繁體中文 / 萬國碼歌名亂碼自動修正
@@ -120,4 +126,6 @@ jobs:
           prerelease: false
           files: |
             release_assets/GarminMusicStudio.exe
-            release_assets/*.zip
+            release_assets/GarminMusicStudio-win-x64-bundle.zip
+            release_assets/ffmpeg.exe
+            release_assets/yt-dlp.exe

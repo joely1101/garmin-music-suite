@@ -41,7 +41,7 @@ public class YouTubeDownloadService
 
         App.Current.Dispatcher.Invoke(() => Tasks.Insert(0, task));
 
-        _ = Task.Run(() => RunDownloadTask(task, downloadPlaylist));
+        _ = Task.Run(async () => await RunDownloadTask(task, downloadPlaylist));
         return task;
     }
 
@@ -84,7 +84,7 @@ public class YouTubeDownloadService
         App.Current.Dispatcher.Invoke(() => Tasks.Clear());
     }
 
-    private void RunDownloadTask(DownloadTask task, bool downloadPlaylist)
+    private async Task RunDownloadTask(DownloadTask task, bool downloadPlaylist)
     {
         try
         {
@@ -105,9 +105,15 @@ public class YouTubeDownloadService
                 cleanUrl = Regex.Replace(cleanUrl, @"[?&]list=[^&]+", "");
             }
 
+            if (!File.Exists(_ytDlpPath) || !File.Exists(Path.Combine(_ffmpegDir, "ffmpeg.exe")))
+            {
+                task.Progress = "正在自動補充必備組件 (yt-dlp/ffmpeg)...";
+                await DependencyService.Instance.EnsureDependenciesAsync();
+            }
+
             if (!File.Exists(_ytDlpPath))
             {
-                throw new FileNotFoundException("找不到 yt-dlp.exe，請確認 bin 目錄完整性。");
+                throw new FileNotFoundException("找不到 yt-dlp.exe，組件自動補充失敗，請確認網路連線。");
             }
 
             var playlistFlag = downloadPlaylist ? "--yes-playlist" : "--no-playlist";

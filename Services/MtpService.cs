@@ -24,7 +24,7 @@ public class MtpService
         EnsureMtpScriptExists();
     }
 
-    private void EnsureMtpScriptExists()
+    public void EnsureMtpScriptExists()
     {
         try
         {
