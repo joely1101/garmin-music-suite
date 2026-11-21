@@ -62,6 +62,8 @@ public class SettingsViewModel : ViewModelBase
     public ICommand RefreshDevicesCommand { get; }
     public ICommand SelectDeviceCommand { get; }
     public ICommand ToggleServerCommand { get; }
+    public ICommand OpenLogCommand { get; }
+    public ICommand OpenLogFolderCommand { get; }
 
     public SettingsViewModel(MainViewModel mainVM)
     {
@@ -82,6 +84,8 @@ public class SettingsViewModel : ViewModelBase
             }
         });
         ToggleServerCommand = new RelayCommand(ToggleServer);
+        OpenLogCommand = new RelayCommand(_ => LogService.Instance.OpenLogFile());
+        OpenLogFolderCommand = new RelayCommand(_ => LogService.Instance.OpenLogDirectory());
 
         _ = LoadDevicesAsync();
     }

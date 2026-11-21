@@ -28,32 +28,52 @@ public class MtpService
     {
         try
         {
-            if (!File.Exists(_mtpScriptPath))
+            var dir = Path.GetDirectoryName(_mtpScriptPath);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             {
-                var dir = Path.GetDirectoryName(_mtpScriptPath);
-                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+            }
+
+            var asm = System.Reflection.Assembly.GetExecutingAssembly();
+            using var stream = asm.GetManifestResourceStream("GarminMusicStudio.bin.mtp_helper.ps1");
+            if (stream != null)
+            {
+                bool needWrite = true;
+                if (File.Exists(_mtpScriptPath))
                 {
-                    Directory.CreateDirectory(dir);
+                    var fi = new FileInfo(_mtpScriptPath);
+                    if (fi.Length == stream.Length)
+                    {
+                        needWrite = false;
+                    }
                 }
 
-                var asm = System.Reflection.Assembly.GetExecutingAssembly();
-                using var stream = asm.GetManifestResourceStream("GarminMusicStudio.bin.mtp_helper.ps1");
-                if (stream != null)
+                if (needWrite)
                 {
                     using var fs = File.Create(_mtpScriptPath);
                     stream.CopyTo(fs);
+                    LogService.Instance.LogInfo($"Extracted updated mtp_helper.ps1 to {_mtpScriptPath} ({stream.Length} bytes)");
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LogService.Instance.LogError($"Failed to extract mtp_helper.ps1: {ex.Message}", ex);
+        }
     }
 
-    private async Task<string> RunPsCommandAsync(string arguments, int timeoutMs = 30000)
+    private async Task<string> RunPsCommandAsync(string arguments, int timeoutMs = 45000)
     {
-        if (!File.Exists(_mtpScriptPath)) return string.Empty;
-
-        return await Task.Run(() =>
+        EnsureMtpScriptExists();
+        if (!File.Exists(_mtpScriptPath))
         {
+            LogService.Instance.LogError($"MTP script does not exist at {_mtpScriptPath}");
+            return string.Empty;
+        }
+
+        return await Task.Run(async () =>
+        {
+            var sw = Stopwatch.StartNew();
             try
             {
                 var psi = new ProcessStartInfo
@@ -64,22 +84,40 @@ public class MtpService
                     RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
-                    StandardErrorEncoding = System.Text.Encoding.UTF8
+                    StandardOutputEncoding = Encoding.UTF8,
+                    StandardErrorEncoding = Encoding.UTF8
                 };
 
                 using var proc = Process.Start(psi);
-                if (proc == null) return string.Empty;
-                var output = proc.StandardOutput.ReadToEnd();
+                if (proc == null)
+                {
+                    LogService.Instance.LogError("Failed to start powershell.exe");
+                    return string.Empty;
+                }
+
+                var stdoutTask = proc.StandardOutput.ReadToEndAsync();
+                var stderrTask = proc.StandardError.ReadToEndAsync();
+
                 if (!proc.WaitForExit(timeoutMs))
                 {
                     try { proc.Kill(); } catch { }
+                    LogService.Instance.LogWarn($"PowerShell process timed out after {timeoutMs}ms: {arguments}");
                 }
-                return output.Trim();
+
+                var stdout = (await stdoutTask).Trim();
+                var stderr = (await stderrTask).Trim();
+
+                if (!string.IsNullOrEmpty(stderr))
+                {
+                    LogService.Instance.LogWarn($"PS Stderr for [{arguments}]: {stderr}");
+                }
+
+                LogService.Instance.LogInfo($"PS completed in {sw.ElapsedMilliseconds}ms (ExitCode {proc.ExitCode}). Args: {arguments}. Output chars: {stdout.Length}");
+                return stdout;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"MTP PS Error: {ex.Message}");
+                LogService.Instance.LogError($"RunPsCommandAsync Exception for [{arguments}]: {ex.Message}", ex);
                 return string.Empty;
             }
         });
@@ -107,10 +145,28 @@ public class MtpService
                 multiplier = 1024L;
                 s = s[..^2].Trim();
             }
+            else if (s.EndsWith("個位元組", StringComparison.OrdinalIgnoreCase))
+            {
+                s = s[..^4].Trim();
+            }
+            else if (s.EndsWith("位元組", StringComparison.OrdinalIgnoreCase))
+            {
+                s = s[..^3].Trim();
+            }
+            else if (s.EndsWith("Bytes", StringComparison.OrdinalIgnoreCase))
+            {
+                s = s[..^5].Trim();
+            }
+            else if (s.EndsWith("Byte", StringComparison.OrdinalIgnoreCase))
+            {
+                s = s[..^4].Trim();
+            }
             else if (s.EndsWith("B", StringComparison.OrdinalIgnoreCase))
             {
                 s = s[..^1].Trim();
             }
+
+            s = s.Replace(",", "");
 
             if (double.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var num))
             {
@@ -390,7 +446,8 @@ public class MtpService
                 subPath = parts.Length > 1 ? parts[1] : "Internal Storage\\Music";
             }
 
-            var output = await RunPsCommandAsync($"-Action list_files -DeviceName \"{devName}\" -SubPath \"{subPath}\"", timeoutMs: 40000);
+            LogService.Instance.LogInfo($"GetWatchTracksAsync: Requesting list_files for DeviceName='{devName}', SubPath='{subPath}'");
+            var output = await RunPsCommandAsync($"-Action list_files -DeviceName \"{devName}\" -SubPath \"{subPath}\"", timeoutMs: 50000);
             if (!string.IsNullOrEmpty(output))
             {
                 try
@@ -449,11 +506,16 @@ public class MtpService
                             });
                         }
                     }
+                    LogService.Instance.LogInfo($"GetWatchTracksAsync: Successfully parsed {tracks.Count} tracks from MTP watch.");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Failed to parse MTP files list: {ex.Message}");
+                    LogService.Instance.LogError($"Failed to parse MTP files list: {ex.Message}", ex);
                 }
+            }
+            else
+            {
+                LogService.Instance.LogWarn($"GetWatchTracksAsync: list_files returned empty output.");
             }
         }
         return tracks;

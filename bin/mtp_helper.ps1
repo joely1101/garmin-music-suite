@@ -13,10 +13,33 @@
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
+function Write-MtpLog {
+    param([string]$level, [string]$msg)
+    try {
+        $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss.fff")
+        $line = "[$timestamp] [PS-$level] $msg"
+        
+        $baseDir = Split-Path -Parent $PSScriptRoot
+        $logDir = Join-Path $baseDir "data"
+        if (![System.IO.Directory]::Exists($logDir)) {
+            [System.IO.Directory]::CreateDirectory($logDir) | Out-Null
+        }
+        $logFile = Join-Path $logDir "mtp_debug.log"
+        [System.IO.File]::AppendAllText($logFile, "$line`r`n", [System.Text.Encoding]::UTF8)
+    } catch {}
+}
+
+Write-MtpLog "INFO" "Invoke Action='$Action', DeviceName='$DeviceName', SubPath='$SubPath'"
+
 function Get-MTPDevices {
     $shell = New-Object -ComObject Shell.Application
     $pc = $shell.NameSpace(17)
     $devices = @()
+
+    if (!$pc) {
+        Write-MtpLog "ERROR" "Get-MTPDevices: Shell.NameSpace(17) returned null"
+        return @()
+    }
 
     foreach ($item in $pc.Items()) {
         $isDrive = $item.Path -match '^[A-Za-z]:\\'
@@ -33,6 +56,7 @@ function Get-MTPDevices {
             }
         }
     }
+    Write-MtpLog "INFO" "Get-MTPDevices: found $($devices.Count) MTP devices"
     return @($devices)
 }
 
@@ -40,6 +64,11 @@ function Detect-MTPGarminWatch {
     $shell = New-Object -ComObject Shell.Application
     $pc = $shell.NameSpace(17)
     $detected = @()
+
+    if (!$pc) {
+        Write-MtpLog "ERROR" "Detect-MTPGarminWatch: Shell.NameSpace(17) returned null"
+        return @()
+    }
 
     foreach ($item in $pc.Items()) {
         $isDrive = $item.Path -match '^[A-Za-z]:\\'
@@ -58,7 +87,7 @@ function Detect-MTPGarminWatch {
                         $storageItem = $sub1
                         break
                     }
-                    # Level 2: Device\Internal Storage\Music, Device\Primary\Music, etc.
+                    # Level 2: Device\Internal Storage\Music, Device\內部儲存空間\Music, Primary\Music, etc.
                     $subF = $null
                     try { $subF = $sub1.GetFolder } catch {}
                     if ($subF) {
@@ -74,10 +103,14 @@ function Detect-MTPGarminWatch {
                 }
 
                 if ($musicPath) {
-                    $totalStr = if ($storageItem) { $f.GetDetailsOf($storageItem, 2) } else { "" }
-                    $freeStr = if ($storageItem) { $f.GetDetailsOf($storageItem, 3) } else { "" }
-                    $usedPctStr = if ($storageItem) { $f.GetDetailsOf($storageItem, 4) } else { "" }
+                    $totalStr = ""
+                    $freeStr = ""
+                    $usedPctStr = ""
+                    try { if ($storageItem) { $totalStr = $f.GetDetailsOf($storageItem, 2) } } catch {}
+                    try { if ($storageItem) { $freeStr = $f.GetDetailsOf($storageItem, 3) } } catch {}
+                    try { if ($storageItem) { $usedPctStr = $f.GetDetailsOf($storageItem, 4) } } catch {}
 
+                    Write-MtpLog "INFO" "Detect-MTPGarminWatch: Found Garmin watch '$devName' at '$musicPath' (Total: $totalStr, Free: $freeStr)"
                     $detected += [PSCustomObject]@{
                         name        = $devName
                         path        = $musicPath
@@ -91,6 +124,7 @@ function Detect-MTPGarminWatch {
             }
         }
     }
+    Write-MtpLog "INFO" "Detect-MTPGarminWatch: detected $($detected.Count) watch devices"
     return @($detected)
 }
 
@@ -100,63 +134,203 @@ function Get-MTPFolderItem {
         [string]$RelPath,
         [switch]$Create
     )
+    Write-MtpLog "DEBUG" "Get-MTPFolderItem DevName='$DevName', RelPath='$RelPath', Create=$Create"
+
     $shell = New-Object -ComObject Shell.Application
     $pc = $shell.NameSpace(17)
-    $device = $pc.Items() | Where-Object { $_.Name.Trim() -eq $DevName.Trim() } | Select-Object -First 1
-    if (!$device) {
-        $device = $pc.Items() | Where-Object { $_.Name -like "*$DevName*" } | Select-Object -First 1
+    if (!$pc) {
+        Write-MtpLog "ERROR" "Failed to get Shell.NameSpace(17)"
+        return $null
     }
+
+    # Find device:
+    # 1. Exact match
+    $device = $pc.Items() | Where-Object { $_.Name.Trim() -eq $DevName.Trim() } | Select-Object -First 1
+    # 2. Substring or reverse-substring match
+    if (!$device) {
+        $device = $pc.Items() | Where-Object { 
+            $_.Name.Trim() -like "*$($DevName.Trim())*" -or 
+            $DevName.Trim() -like "*$($_.Name.Trim())*" 
+        } | Select-Object -First 1
+    }
+    if (!$device) {
+        $avail = ($pc.Items() | ForEach-Object { $_.Name }) -join ", "
+        Write-MtpLog "WARN" "Device '$DevName' not found in This PC. Available items: [$avail]"
+        return $null
+    }
+
+    Write-MtpLog "INFO" "Resolved device item: '$($device.Name)'"
+
+    $folder = $null
+    try { $folder = $device.GetFolder } catch {
+        Write-MtpLog "ERROR" "device.GetFolder threw: $_"
+    }
+    if (!$folder) {
+        Write-MtpLog "WARN" "device.GetFolder returned null"
+        return $null
+    }
+
+    if (!$RelPath -or $RelPath.Trim() -eq "") {
+        return $folder
+    }
+
+    $cleanRel = $RelPath.Trim('\').Replace('/', '\')
+    $parts = $cleanRel.Split('\')
+
+    # Try step-by-step navigation
+    $currFolder = $folder
+    $resolved = $true
+
+    for ($i = 0; $i -lt $parts.Length; $i++) {
+        $part = $parts[$i].Trim()
+        if (!$part) { continue }
+
+        $child = $null
+        try {
+            $child = $currFolder.Items() | Where-Object { $_.Name.Trim() -eq $part } | Select-Object -First 1
+        } catch {
+            Write-MtpLog "ERROR" "currFolder.Items() threw searching for '$part': $_"
+        }
+
+        # Case-insensitive / whitespace-tolerant match
+        if (!$child) {
+            try {
+                $child = $currFolder.Items() | Where-Object { 
+                    [string]::Equals($_.Name.Trim(), $part, [System.StringComparison]::OrdinalIgnoreCase) 
+                } | Select-Object -First 1
+            } catch {}
+        }
+
+        # If searching for storage folder (e.g. "Internal Storage"), also check common localized aliases:
+        if (!$child -and $i -eq 0 -and ($part -in @("Internal Storage", "Primary", "內部儲存空間", "内部存储", "GARMIN", "Phone", "Storage", "內部共用儲存空間"))) {
+            Write-MtpLog "DEBUG" "Storage part '$part' not directly matched. Trying storage aliases..."
+            try {
+                $storageAliases = @("Internal Storage", "Primary", "內部儲存空間", "内部存储", "GARMIN", "Phone", "Storage", "內部共用儲存空間")
+                $child = $currFolder.Items() | Where-Object { 
+                    $itemName = $_.Name.Trim()
+                    ($storageAliases -contains $itemName) -or ($itemName -match "(?i)storage|儲存|存储|primary")
+                } | Select-Object -First 1
+                if ($child) {
+                    Write-MtpLog "INFO" "Storage part '$part' matched alias '$($child.Name)'"
+                }
+            } catch {}
+        }
+
+        # If not found and Create flag is on
+        if (!$child -and $Create) {
+            try {
+                Write-MtpLog "INFO" "Creating folder '$part' in '$($currFolder.Title)'"
+                $currFolder.NewFolder($part)
+                Start-Sleep -Milliseconds 400
+                $child = $currFolder.Items() | Where-Object { [string]::Equals($_.Name.Trim(), $part, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
+            } catch {
+                Write-MtpLog "ERROR" "NewFolder('$part') failed: $_"
+            }
+        }
+
+        if (!$child) {
+            $resolved = $false
+            $childrenNames = ($currFolder.Items() | ForEach-Object { $_.Name }) -join ", "
+            Write-MtpLog "WARN" "Part '$part' not found in folder '$($currFolder.Title)'. Available children: [$childrenNames]"
+            break
+        }
+
+        $nextF = $null
+        try { $nextF = $child.GetFolder } catch {
+            Write-MtpLog "ERROR" "child.GetFolder threw for '$part': $_"
+        }
+        if (!$nextF) {
+            $resolved = $false
+            Write-MtpLog "WARN" "child.GetFolder returned null for '$part'"
+            break
+        }
+        $currFolder = $nextF
+    }
+
+    if ($resolved -and $currFolder) {
+        Write-MtpLog "INFO" "Successfully resolved folder path '$RelPath'"
+        return $currFolder
+    }
+
+    # FALLBACK FOR MUSIC DIRECTORY:
+    # If looking for a path with Music and step-by-step failed, find the Music folder anywhere under device!
+    if ($cleanRel -match "(?i)Music") {
+        Write-MtpLog "INFO" "Step-by-step resolution failed. Starting fallback search for 'Music' under device..."
+        # 1. Directly under device
+        try {
+            $directMusic = $folder.Items() | Where-Object { $_.Name -like "*music*" -or $_.Name -like "*音樂*" } | Select-Object -First 1
+            if ($directMusic) {
+                $mF = $directMusic.GetFolder
+                if ($mF) {
+                    Write-MtpLog "INFO" "Fallback found Music folder directly under device: '$($directMusic.Name)'"
+                    return $mF
+                }
+            }
+        } catch {}
+
+        # 2. Check under all level 1 subfolders (e.g. Device -> [Internal Storage / 內部儲存空間 / etc.] -> Music)
+        try {
+            foreach ($sub in $folder.Items()) {
+                $subF = $null
+                try { $subF = $sub.GetFolder } catch {}
+                if ($subF) {
+                    $mItem = $subF.Items() | Where-Object { $_.Name -like "*music*" -or $_.Name -like "*音樂*" } | Select-Object -First 1
+                    if ($mItem) {
+                        $mF = $null
+                        try { $mF = $mItem.GetFolder } catch {}
+                        if ($mF) {
+                            Write-MtpLog "INFO" "Fallback found Music folder under '$($sub.Name)': '$($mItem.Name)'"
+                            return $mF
+                        }
+                    }
+                }
+            }
+        } catch {
+            Write-MtpLog "ERROR" "Fallback search error: $_"
+        }
+    }
+
+    Write-MtpLog "WARN" "Could not resolve folder '$RelPath' on device '$DevName'"
+    return $null
+}
+
+function Get-MTPStorageInfo {
+    param([string]$DevName, [string]$RelPath)
+    Write-MtpLog "DEBUG" "Get-MTPStorageInfo DevName='$DevName', RelPath='$RelPath'"
+    $shell = New-Object -ComObject Shell.Application
+    $pc = $shell.NameSpace(17)
+    if (!$pc) { return $null }
+
+    $device = $pc.Items() | Where-Object { $_.Name.Trim() -eq $DevName.Trim() -or $_.Name -like "*$DevName*" -or $DevName -like "*$($_.Name)*" } | Select-Object -First 1
     if (!$device) { return $null }
 
     $folder = $null
     try { $folder = $device.GetFolder } catch {}
     if (!$folder) { return $null }
 
-    if (!$RelPath -or $RelPath.Trim() -eq "") {
-        return $folder
-    }
-
-    $parts = $RelPath.Trim('\').Split('\')
-    foreach ($part in $parts) {
-        if (!$part) { continue }
-        $child = $folder.Items() | Where-Object { $_.Name.Trim() -eq $part.Trim() } | Select-Object -First 1
-        if (!$child -and $Create) {
-            try {
-                $folder.NewFolder($part.Trim())
-                Start-Sleep -Milliseconds 350
-                $child = $folder.Items() | Where-Object { $_.Name.Trim() -eq $part.Trim() } | Select-Object -First 1
-            } catch {}
-        }
-        if (!$child) { return $null }
-        $folder = $child.GetFolder
-    }
-    return $folder
-}
-
-function Get-MTPStorageInfo {
-    param([string]$DevName, [string]$RelPath)
-    $shell = New-Object -ComObject Shell.Application
-    $pc = $shell.NameSpace(17)
-    $device = $pc.Items() | Where-Object { $_.Name.Trim() -eq $DevName.Trim() -or $_.Name -like "*$DevName*" } | Select-Object -First 1
-    if (!$device) { return $null }
-
-    $folder = $device.GetFolder
-    if (!$folder) { return $null }
-
-    $parts = if ($RelPath) { @($RelPath.Trim('\').Split('\')) } else { @() }
+    $parts = if ($RelPath) { @($RelPath.Trim('\').Replace('/', '\').Split('\')) } else { @() }
     $storagePart = if ($parts.Count -gt 0) { [string]$parts[0] } else { "" }
     $storageItem = $null
     if ($storagePart) {
         $storageItem = $folder.Items() | Where-Object { [string]$_.Name.Trim() -eq $storagePart.Trim() } | Select-Object -First 1
     }
     if (!$storageItem) {
+        $storageItem = $folder.Items() | Where-Object { 
+            $itemName = $_.Name.Trim()
+            $itemName -match "(?i)storage|儲存|存储|primary"
+        } | Select-Object -First 1
+    }
+    if (!$storageItem) {
         $storageItem = $folder.Items() | Select-Object -First 1
     }
     if (!$storageItem) { return $null }
 
-    $totalStr = $folder.GetDetailsOf($storageItem, 2)
-    $freeStr = $folder.GetDetailsOf($storageItem, 3)
-    $usedPctStr = $folder.GetDetailsOf($storageItem, 4)
+    $totalStr = ""
+    $freeStr = ""
+    $usedPctStr = ""
+    try { $totalStr = $folder.GetDetailsOf($storageItem, 2) } catch {}
+    try { $freeStr = $folder.GetDetailsOf($storageItem, 3) } catch {}
+    try { $usedPctStr = $folder.GetDetailsOf($storageItem, 4) } catch {}
 
     return [PSCustomObject]@{
         total_str = $totalStr
@@ -187,7 +361,7 @@ function List-MTPSubfolders {
 
     $parentPath = $null
     if ($RelPath) {
-        $parts = $RelPath.Trim('\').Split('\')
+        $parts = $RelPath.Trim('\').Replace('/', '\').Split('\')
         if ($parts.Count -gt 1) {
             $parentRel = ($parts[0..($parts.Count - 2)]) -join '\'
             $parentPath = "mtp:\$DevName\$parentRel"
@@ -207,6 +381,7 @@ function List-MTPSubfolders {
 
 function Copy-FileToMTP {
     param([string]$DevName, [string]$RelPath, [string]$SrcFile)
+    Write-MtpLog "INFO" "Copy-FileToMTP: DevName='$DevName', RelPath='$RelPath', SrcFile='$SrcFile'"
     if (![System.IO.File]::Exists($SrcFile)) {
         return [PSCustomObject]@{ success = $false; error = "本機來源檔案不存在: $SrcFile" }
     }
@@ -216,6 +391,7 @@ function Copy-FileToMTP {
 
     $folder = Get-MTPFolderItem -DevName $DevName -RelPath $RelPath -Create
     if (!$folder) {
+        Write-MtpLog "ERROR" "Copy-FileToMTP: Failed to find or create destination folder '$RelPath'"
         return [PSCustomObject]@{ success = $false; error = "找不到或無法建立手錶目標資料夾: $RelPath" }
     }
 
@@ -223,6 +399,7 @@ function Copy-FileToMTP {
     try {
         $existing = $folder.Items() | Where-Object { $_.Name -eq $srcName } | Select-Object -First 1
         if ($existing) {
+            Write-MtpLog "INFO" "Copy-FileToMTP: Deleting existing file '$srcName' on watch first"
             $existing.InvokeVerb("delete")
             Start-Sleep -Milliseconds 500
         }
@@ -244,7 +421,8 @@ function Copy-FileToMTP {
             Start-Sleep -Milliseconds 800
             $destItem = $folder.Items() | Where-Object { $_.Name -eq $srcName } | Select-Object -First 1
             if ($destItem) {
-                $detSize = $folder.GetDetailsOf($destItem, 2)
+                $detSize = ""
+                try { $detSize = $folder.GetDetailsOf($destItem, 2) } catch {}
                 # 當 GetDetailsOf 返回非空且非 0 時，代表傳輸已順利完成
                 if ($detSize -and $detSize.Trim() -ne "" -and $detSize -ne "0" -and $detSize -ne "0 KB") {
                     $completed = $true
@@ -255,17 +433,21 @@ function Copy-FileToMTP {
         }
 
         if ($completed) {
+            Write-MtpLog "INFO" "Copy-FileToMTP: Successfully copied '$srcName' in $($sw.ElapsedMilliseconds)ms"
             return [PSCustomObject]@{ success = $true }
         }
 
         # 最後再次確認檔案是否存在
         $finalCheck = $folder.Items() | Where-Object { $_.Name -eq $srcName } | Select-Object -First 1
         if ($finalCheck) {
+            Write-MtpLog "INFO" "Copy-FileToMTP: Final check passed for '$srcName'"
             return [PSCustomObject]@{ success = $true }
         } else {
+            Write-MtpLog "WARN" "Copy-FileToMTP: Transfer timed out, file '$srcName' not found"
             return [PSCustomObject]@{ success = $false; error = "傳輸逾時，檔案未成功寫入手錶" }
         }
     } catch {
+        Write-MtpLog "ERROR" "Copy-FileToMTP exception: $_"
         return [PSCustomObject]@{ success = $false; error = $_.Exception.Message }
     }
 }
@@ -305,6 +487,7 @@ function Copy-FileFromMTP {
 
 function Delete-FileFromMTP {
     param([string]$DevName, [string]$RelPath, [string]$FileName)
+    Write-MtpLog "INFO" "Delete-FileFromMTP DevName='$DevName', RelPath='$RelPath', FileName='$FileName'"
     $folder = Get-MTPFolderItem -DevName $DevName -RelPath $RelPath
     if (!$folder) {
         return [PSCustomObject]@{ success = $false; error = "找不到目標資料夾: $RelPath" }
@@ -317,12 +500,14 @@ function Delete-FileFromMTP {
         $item.InvokeVerb("delete")
         return [PSCustomObject]@{ success = $true }
     } catch {
+        Write-MtpLog "ERROR" "Delete-FileFromMTP error: $_"
         return [PSCustomObject]@{ success = $false; error = $_.Exception.Message }
     }
 }
 
 function Delete-FilesBatch {
     param([string]$DevName, [string]$FileListPath)
+    Write-MtpLog "INFO" "Delete-FilesBatch DevName='$DevName', FileListPath='$FileListPath'"
     if (!(Test-Path $FileListPath)) {
         return [PSCustomObject]@{ success = $false; error = "找不到檔案清單: $FileListPath" }
     }
@@ -361,6 +546,7 @@ function Delete-FilesBatch {
 
 function Rename-FileInMTP {
     param([string]$DevName, [string]$RelPath, [string]$FileName, [string]$NewName)
+    Write-MtpLog "INFO" "Rename-FileInMTP DevName='$DevName', RelPath='$RelPath', FileName='$FileName', NewName='$NewName'"
     $folder = Get-MTPFolderItem -DevName $DevName -RelPath $RelPath
     if (!$folder) {
         return [PSCustomObject]@{ success = $false; error = "找不到目標資料夾: $RelPath" }
@@ -379,46 +565,76 @@ function Rename-FileInMTP {
 
 function List-MTPFiles {
     param([string]$DevName, [string]$RelPath)
+    Write-MtpLog "INFO" "List-MTPFiles starting. DevName='$DevName', RelPath='$RelPath'"
     $folder = Get-MTPFolderItem -DevName $DevName -RelPath $RelPath
     if (!$folder) {
+        Write-MtpLog "WARN" "List-MTPFiles: folder could not be resolved for DevName='$DevName', RelPath='$RelPath'"
         return @()
     }
 
     # 遞迴掃描 MTP 目錄下所有音樂與播放清單檔案
     function Recurse-MTPFolder($f, $rel) {
         $result = @()
-        foreach ($item in $f.Items()) {
-            if ($item.IsFolder) {
-                $subF = $null
-                try { $subF = $item.GetFolder } catch {}
-                if ($subF) {
-                    $nextRel = if ($rel) { "$rel\$($item.Name)" } else { $item.Name }
-                    $result += Recurse-MTPFolder $subF $nextRel
-                }
-            } else {
-                $name = $item.Name
-                $ext = [System.IO.Path]::GetExtension($name).ToLower()
-                if ($ext -in @('.mp3', '.m4a', '.aac', '.flac', '.wav', '.wma', '.ogg', '.m3u', '.m3u8')) {
-                    $sizeStr = $f.GetDetailsOf($item, 2)
-                    $isPlaylist = ($ext -eq '.m3u' -or $ext -eq '.m3u8')
-                    $folderName = if ($isPlaylist) { "手機撥放清單" } elseif ($rel) { $rel.Split('\')[0] } else { "手機撥放清單" }
-                    $fileRel = if ($rel) { "$rel\$name" } else { $name }
-                    $result += [PSCustomObject]@{
-                        name        = $name
-                        folder      = $folderName
-                        sub_folder  = $folderName
-                        rel_path    = $fileRel
-                        size_str    = $sizeStr
-                        size        = $item.Size
-                        path        = "mtp:\$DevName\$RelPath\$fileRel"
+        try {
+            $items = $f.Items()
+            if (!$items) { return @() }
+        } catch {
+            Write-MtpLog "ERROR" "Recurse-MTPFolder failed to get items: $_"
+            return @()
+        }
+
+        foreach ($item in $items) {
+            try {
+                $isFolder = $false
+                try { $isFolder = $item.IsFolder } catch {}
+
+                if ($isFolder) {
+                    $subF = $null
+                    try { $subF = $item.GetFolder } catch {}
+                    if ($subF) {
+                        $nextRel = if ($rel) { "$rel\$($item.Name)" } else { $item.Name }
+                        $subResults = Recurse-MTPFolder $subF $nextRel
+                        if ($subResults) { $result += $subResults }
+                    }
+                } else {
+                    $name = ""
+                    try { $name = [string]$item.Name } catch {}
+                    if ([string]::IsNullOrWhiteSpace($name)) { continue }
+
+                    $ext = [System.IO.Path]::GetExtension($name).ToLowerInvariant()
+                    if ($ext -in @('.mp3', '.m4a', '.aac', '.flac', '.wav', '.wma', '.ogg', '.m3u', '.m3u8')) {
+                        $sizeStr = ""
+                        try { $sizeStr = [string]$f.GetDetailsOf($item, 2) } catch {}
+
+                        $fileSize = 0
+                        try {
+                            if ($item.Size) { $fileSize = [int64]$item.Size }
+                        } catch {}
+
+                        $isPlaylist = ($ext -eq '.m3u' -or $ext -eq '.m3u8')
+                        $folderName = if ($isPlaylist) { "手機撥放清單" } elseif ($rel) { $rel.Split('\')[0] } else { "手機撥放清單" }
+                        $fileRel = if ($rel) { "$rel\$name" } else { $name }
+
+                        $result += [PSCustomObject]@{
+                            name        = $name
+                            folder      = $folderName
+                            sub_folder  = $folderName
+                            rel_path    = $fileRel
+                            size_str    = $sizeStr
+                            size        = $fileSize
+                            path        = "mtp:\$DevName\$RelPath\$fileRel"
+                        }
                     }
                 }
+            } catch {
+                Write-MtpLog "WARN" "Error processing item in folder '$rel': $_"
             }
         }
         return @($result)
     }
 
     $allFiles = @(Recurse-MTPFolder $folder "")
+    Write-MtpLog "INFO" "List-MTPFiles complete. Total audio/playlist files found: $($allFiles.Count)"
     return @($allFiles)
 }
 

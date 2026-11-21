@@ -296,8 +296,12 @@
                                  Padding="8,4" FontSize="15"/>
 
                         <!-- Refresh Button -->
-                        <Button Style="{StaticResource FlatButton}" Content="🔄" Padding="10,5" FontSize="15"
+                        <Button Style="{StaticResource FlatButton}" Content="🔄" Padding="10,5" FontSize="15" Margin="0,0,8,0"
                                 Command="{Binding RefreshWatchCommand}" ToolTip="重新整理手錶清單"/>
+
+                        <!-- Diagnostic Log Button -->
+                        <Button Style="{StaticResource FlatButton}" Content="📄 診斷紀錄" Padding="10,5" FontSize="14"
+                                Command="{Binding OpenMtpLogCommand}" ToolTip="開啟手錶連線與 MTP 掃描診斷日誌 (Log)"/>
                     </StackPanel>
                 </Grid>
 
@@ -429,6 +433,30 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+
+                <!-- Empty state if 0 watch songs -->
+                <Border Grid.Row="2" Background="#141414" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="1" CornerRadius="6" 
+                        Padding="28" Margin="20" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding TotalFilteredWatchCount}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel HorizontalAlignment="Center" MaxWidth="500">
+                        <TextBlock Text="⌚ 手錶尚未偵測到歌曲或目錄為空" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                   FontSize="16" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8"/>
+                        <TextBlock Text="若手錶內已有音樂但此處顯示 0 首，請點擊下方「查看診斷紀錄」檢視排查資訊，或至「設定」檢查手錶 MTP 選取狀態。" 
+                                   FontSize="13" Foreground="#737373" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,14"/>
+                        <Button Style="{StaticResource FlatButton}" Content="📄 查看診斷紀錄 (Log)" 
+                                HorizontalAlignment="Center" Padding="16,6" FontSize="14"
+                                Command="{Binding OpenMtpLogCommand}"/>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
 

@@ -213,6 +213,7 @@ public class WatchSyncViewModel : ViewModelBase
     public ICommand RefreshWatchCommand { get; }
     public ICommand AddFolderCommand { get; }
     public ICommand OpenMusicDirCommand { get; }
+    public ICommand OpenMtpLogCommand { get; }
 
     public WatchSyncViewModel(MainViewModel mainVM)
     {
@@ -241,6 +242,7 @@ public class WatchSyncViewModel : ViewModelBase
         });
         AddFolderCommand = new RelayCommand(PromptAddFolder);
         OpenMusicDirCommand = new RelayCommand(OpenMusicDirectory);
+        OpenMtpLogCommand = new RelayCommand(_ => LogService.Instance.OpenLogFile());
     }
 
     private void OpenMusicDirectory()

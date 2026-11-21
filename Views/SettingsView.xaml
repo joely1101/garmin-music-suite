@@ -25,13 +25,23 @@
                                        FontSize="15" Foreground="{StaticResource BrushTextSecondary}"/>
                         </StackPanel>
 
-                        <Button Grid.Column="1" Style="{StaticResource FlatButton}" 
-                                Command="{Binding RefreshDevicesCommand}" Height="38" Padding="14,0" FontSize="15">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⟳" FontSize="16" FontWeight="Bold" Margin="0,0,8,0"/>
-                                <TextBlock Text="重新整理裝置清單" FontSize="15"/>
-                            </StackPanel>
-                        </Button>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Style="{StaticResource FlatButton}" 
+                                    Command="{Binding OpenLogCommand}" Height="38" Padding="12,0" FontSize="14" Margin="0,0,8,0"
+                                    ToolTip="開啟手錶連線與 MTP 診斷日誌 (Log)">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="📄 " FontSize="14"/>
+                                    <TextBlock Text="查看診斷紀錄" FontSize="14"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource FlatButton}" 
+                                    Command="{Binding RefreshDevicesCommand}" Height="38" Padding="14,0" FontSize="14">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="⟳" FontSize="16" FontWeight="Bold" Margin="0,0,8,0"/>
+                                    <TextBlock Text="重新整理裝置" FontSize="14"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
                     </Grid>
 
                     <!-- DETECTED DEVICES LIST -->
@@ -148,6 +158,25 @@
                         <Button Grid.Column="2" Style="{StaticResource FlatButton}" Content="恢復自動偵測" 
                                 Command="{Binding ClearWatchPathCommand}" Height="42" Padding="16,0" FontSize="15"/>
                     </Grid>
+
+                    <!-- LOG & DIAGNOSTICS CARD -->
+                    <Border Background="#18181b" BorderBrush="#27272a" BorderThickness="1" CornerRadius="6" Padding="14,10" Margin="0,12,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="手錶偵測與 MTP 傳輸診斷日誌 (Log)" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}"/>
+                                <TextBlock Text="若 Windows 10/11 手錶歌曲未列出、連線逾時或傳輸異常，可查看診斷日誌以利排查。" 
+                                           FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,3,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Style="{StaticResource FlatButton}" Content="📄 開啟診斷紀錄" Command="{Binding OpenLogCommand}" Padding="12,6" FontSize="13" Margin="0,0,8,0"/>
+                                <Button Style="{StaticResource FlatButton}" Content="📁 開啟日誌資料夾" Command="{Binding OpenLogFolderCommand}" Padding="12,6" FontSize="13"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                 </StackPanel>
             </Border>
 
