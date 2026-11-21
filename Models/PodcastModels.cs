@@ -23,6 +23,18 @@ public class PodcastEpisode : INotifyPropertyChanged
     public string AudioUrl { get; set; } = string.Empty;
     public string PublishedDate { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string Duration { get; set; } = string.Empty;
+
+    public string DurationFormatted => string.IsNullOrWhiteSpace(Duration) ? "" : Duration;
+
+    public DateTime? ReleaseDate
+    {
+        get
+        {
+            if (DateTime.TryParse(PublishedDate, out var dt)) return dt;
+            return null;
+        }
+    }
 
     public bool IsDownloading
     {

@@ -1,6 +1,8 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace GarminMusicStudio.Models;
 
@@ -24,7 +26,13 @@ public class DownloadTask : INotifyPropertyChanged
     public string Status
     {
         get => _status;
-        set => SetField(ref _status, value);
+        set
+        {
+            if (SetField(ref _status, value))
+            {
+                OnPropertyChanged(nameof(CanCancel));
+            }
+        }
     }
 
     public string Progress
@@ -38,6 +46,12 @@ public class DownloadTask : INotifyPropertyChanged
         get => _error;
         set => SetField(ref _error, value);
     }
+
+    public bool CanCancel => Status == "downloading" || Status == "processing" || Status == "queued";
+
+    public CancellationTokenSource? Cts { get; set; }
+    public Process? RunningProcess { get; set; }
+    public string? OutputFilePath { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 

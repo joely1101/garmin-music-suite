@@ -4,35 +4,52 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="900">
+             d:DesignHeight="800" d:DesignWidth="1000">
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="*" MinHeight="260"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- TOP SEARCH BAR -->
+        <!-- TOP SEARCH & FOLDER BAR -->
         <Border Grid.Row="0" Background="{StaticResource BrushCardBg}" BorderBrush="{StaticResource BrushCardBorder}" 
                 BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,14">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="260"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Height="42" 
+                <!-- Search Input -->
+                <TextBox Grid.Column="0" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Height="42" 
                          VerticalContentAlignment="Center" Margin="0,0,12,0" FontSize="16"/>
 
+                <!-- Search Button -->
                 <Button Grid.Column="1" Style="{StaticResource OrangeButton}" Content="搜尋 Podcast" 
-                        Command="{Binding SearchCommand}" Height="42" Padding="22,0" FontSize="16"/>
+                        Command="{Binding SearchCommand}" Height="42" Padding="22,0" FontSize="16" Margin="0,0,20,0"/>
+
+                <!-- Target Folder ComboBox -->
+                <Grid Grid.Column="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="下載目錄:" FontSize="15" FontWeight="Medium" 
+                               Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox Grid.Column="1" Height="42" ItemsSource="{Binding Folders}" SelectedItem="{Binding TargetFolder}" 
+                              IsEditable="True" Background="#0a0a0a" Foreground="{StaticResource BrushTextPrimary}"
+                              BorderBrush="{StaticResource BrushCardBorder}" FontSize="15"/>
+                </Grid>
             </Grid>
         </Border>
 
         <!-- RESULTS & EPISODES SPLIT VIEW -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="1" Margin="0,0,0,14">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="350"/>
+                <ColumnDefinition Width="360"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -146,5 +163,108 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <!-- BOTTOM CARD: TASK QUEUE -->
+        <Border Grid.Row="2" Background="{StaticResource BrushCardBg}" BorderBrush="{StaticResource BrushCardBorder}" 
+                BorderThickness="1" CornerRadius="8" Padding="18" MaxHeight="220">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="下載任務狀態" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Style="{StaticResource FlatButton}" Content="🗑 一鍵清空" 
+                            Command="{Binding ClearTasksCommand}" Padding="14,5" FontSize="14" VerticalAlignment="Center"/>
+                </Grid>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Tasks}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#121212" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="1" 
+                                        CornerRadius="8" Padding="14,10" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Title, Target Folder & Progress -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="540"/>
+                                                <TextBlock Text="{Binding TargetFolder, StringFormat='{}  [{0}]'}" FontSize="13" Foreground="{StaticResource BrushPrimaryOrange}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Progress}" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <!-- Status Badge & Action Buttons -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border CornerRadius="6" Padding="12,5" Margin="0,0,10,0">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#332b14"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}" Value="completed">
+                                                                <Setter Property="Background" Value="#064e3b"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="failed">
+                                                                <Setter Property="Background" Value="#450a0a"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="cancelled">
+                                                                <Setter Property="Background" Value="#262626"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock FontSize="13" FontWeight="SemiBold">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#eab308"/>
+                                                            <Setter Property="Text" Value="下載中..."/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="completed">
+                                                                    <Setter Property="Foreground" Value="#34d399"/>
+                                                                    <Setter Property="Text" Value="已完成"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="failed">
+                                                                    <Setter Property="Foreground" Value="#f87171"/>
+                                                                    <Setter Property="Text" Value="失敗"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="cancelled">
+                                                                    <Setter Property="Foreground" Value="#9ca3af"/>
+                                                                    <Setter Property="Text" Value="已取消"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+
+                                            <!-- Cancel Button -->
+                                            <Button Style="{StaticResource FlatButton}" Content="取消" Margin="0,0,8,0" Padding="12,5" FontSize="13"
+                                                    Visibility="{Binding CanCancel, Converter={StaticResource BoolToVis}}"
+                                                    Command="{Binding DataContext.CancelTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"/>
+
+                                            <!-- Delete Button -->
+                                            <Button Style="{StaticResource FlatButton}" Content="刪除" Padding="12,5" FontSize="13"
+                                                    Command="{Binding DataContext.DeleteTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

@@ -37,8 +37,8 @@
                     <!-- Target Folder -->
                     <StackPanel Grid.Column="0" Margin="0,0,20,0">
                         <TextBlock Text="儲存目錄分類" FontSize="15" FontWeight="Medium" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8"/>
-                        <ComboBox Height="42" ItemsSource="{Binding Folders}" SelectedValue="{Binding TargetFolder}" 
-                                  SelectedValuePath="Name" DisplayMemberPath="Name" Background="#0a0a0a" Foreground="{StaticResource BrushTextPrimary}"
+                        <ComboBox Height="42" ItemsSource="{Binding Folders}" SelectedItem="{Binding TargetFolder}" 
+                                  IsEditable="True" Background="#0a0a0a" Foreground="{StaticResource BrushTextPrimary}"
                                   BorderBrush="{StaticResource BrushCardBorder}" FontSize="16"/>
                     </StackPanel>
 
@@ -62,7 +62,15 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="下載任務狀態" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
+                <Grid Grid.Row="0" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="下載任務狀態" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Style="{StaticResource FlatButton}" Content="🗑 一鍵清空" 
+                            Command="{Binding ClearTasksCommand}" Padding="14,6" FontSize="14" VerticalAlignment="Center"/>
+                </Grid>
 
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding Tasks}">
@@ -76,48 +84,69 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <!-- Title & Progress -->
-                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <!-- Title, Folder & Progress -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="500"/>
+                                                <TextBlock Text="{Binding TargetFolder, StringFormat='{}  [{0}]'}" FontSize="14" Foreground="{StaticResource BrushPrimaryOrange}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
                                             <TextBlock Text="{Binding Progress}" FontSize="14" Foreground="{StaticResource BrushTextSecondary}" Margin="0,5,0,0"/>
                                         </StackPanel>
 
-                                        <!-- Status Badge -->
-                                        <Border Grid.Column="1" CornerRadius="6" Padding="12,5" VerticalAlignment="Center" Margin="16,0,0,0">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="Background" Value="#332b14"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Status}" Value="completed">
-                                                            <Setter Property="Background" Value="#064e3b"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Status}" Value="failed">
-                                                            <Setter Property="Background" Value="#450a0a"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <TextBlock Text="{Binding Status}" FontSize="14" FontWeight="SemiBold">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#eab308"/>
+                                        <!-- Status Badge & Action Buttons -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border CornerRadius="6" Padding="12,5" Margin="0,0,10,0">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#332b14"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding Status}" Value="completed">
-                                                                <Setter Property="Foreground" Value="#34d399"/>
-                                                                <Setter Property="Text" Value="已完成"/>
+                                                                <Setter Property="Background" Value="#064e3b"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding Status}" Value="failed">
-                                                                <Setter Property="Foreground" Value="#f87171"/>
-                                                                <Setter Property="Text" Value="失敗"/>
+                                                                <Setter Property="Background" Value="#450a0a"/>
                                                             </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Status}" Value="downloading">
-                                                                <Setter Property="Text" Value="下載中..."/>
+                                                            <DataTrigger Binding="{Binding Status}" Value="cancelled">
+                                                                <Setter Property="Background" Value="#262626"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </Border>
+                                                </Border.Style>
+                                                <TextBlock FontSize="14" FontWeight="SemiBold">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#eab308"/>
+                                                            <Setter Property="Text" Value="下載中..."/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="completed">
+                                                                    <Setter Property="Foreground" Value="#34d399"/>
+                                                                    <Setter Property="Text" Value="已完成"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="failed">
+                                                                    <Setter Property="Foreground" Value="#f87171"/>
+                                                                    <Setter Property="Text" Value="失敗"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="cancelled">
+                                                                    <Setter Property="Foreground" Value="#9ca3af"/>
+                                                                    <Setter Property="Text" Value="已取消"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+
+                                            <!-- Cancel Button -->
+                                            <Button Style="{StaticResource FlatButton}" Content="取消" Margin="0,0,8,0" Padding="12,5" FontSize="13"
+                                                    Visibility="{Binding CanCancel, Converter={StaticResource BoolToVis}}"
+                                                    Command="{Binding DataContext.CancelTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"/>
+
+                                            <!-- Delete Button -->
+                                            <Button Style="{StaticResource FlatButton}" Content="刪除" Padding="12,5" FontSize="13"
+                                                    Command="{Binding DataContext.DeleteTaskCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
                             </DataTemplate>

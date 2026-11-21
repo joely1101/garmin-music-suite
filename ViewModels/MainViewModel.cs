@@ -21,6 +21,7 @@ public class MainViewModel : ViewModelBase
     public AudioPlayerService AudioPlayer => AudioPlayerService.Instance;
 
     public ObservableCollection<FolderItem> Folders { get; } = new();
+    public ObservableCollection<string> TargetFolders { get; } = new();
 
     public int SelectedTabIndex
     {
@@ -109,9 +110,17 @@ public class MainViewModel : ViewModelBase
         Folders.Clear();
         foreach (var f in list) Folders.Add(f);
 
+        var targets = DatabaseService.Instance.GetAvailableTargetFolders();
+        TargetFolders.Clear();
+        foreach (var t in targets) TargetFolders.Add(t);
+
         if (SelectedFolder == null && Folders.Count > 0)
         {
             SelectedFolder = Folders[0];
+        }
+        else if (SelectedFolder != null && !Folders.Any(f => f.Name == SelectedFolder.Name))
+        {
+            SelectedFolder = Folders.FirstOrDefault();
         }
     }
 
@@ -131,11 +140,16 @@ public class MainViewModel : ViewModelBase
 
     private void PromptAddFolder()
     {
-        // Simple input dialog
         var dialog = new Views.InputDialog("新增電腦分類目錄", "請輸入新分類目錄名稱 (例如: 180步頻):");
+        dialog.Owner = System.Windows.Application.Current.MainWindow;
         if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.InputText))
         {
-            DatabaseService.Instance.CreateFolder(dialog.InputText.Trim());
+            var folderName = dialog.InputText.Trim();
+            DatabaseService.Instance.CreateFolder(folderName);
+            if (!TargetFolders.Contains(folderName))
+            {
+                TargetFolders.Add(folderName);
+            }
             _ = RefreshFoldersAsync();
         }
     }

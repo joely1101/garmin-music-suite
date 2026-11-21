@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using GarminMusicStudio.Models;
@@ -40,6 +41,36 @@ public class YouTubeDownloadService
 
         _ = Task.Run(() => RunDownloadTask(task, downloadPlaylist));
         return task;
+    }
+
+    public void CancelTask(DownloadTask task)
+    {
+        try
+        {
+            if (task.RunningProcess != null && !task.RunningProcess.HasExited)
+            {
+                task.RunningProcess.Kill(true);
+            }
+        }
+        catch { }
+
+        task.Status = "cancelled";
+        task.Progress = "已取消下載";
+    }
+
+    public void DeleteTask(DownloadTask task)
+    {
+        CancelTask(task);
+        App.Current.Dispatcher.Invoke(() => Tasks.Remove(task));
+    }
+
+    public void ClearTasks()
+    {
+        foreach (var task in Tasks.ToList())
+        {
+            CancelTask(task);
+        }
+        App.Current.Dispatcher.Invoke(() => Tasks.Clear());
     }
 
     private void RunDownloadTask(DownloadTask task, bool downloadPlaylist)
@@ -84,11 +115,12 @@ public class YouTubeDownloadService
             };
 
             using var proc = new Process { StartInfo = psi };
+            task.RunningProcess = proc;
             string lastOutput = string.Empty;
 
             proc.OutputDataReceived += (s, e) =>
             {
-                if (string.IsNullOrWhiteSpace(e.Data)) return;
+                if (string.IsNullOrWhiteSpace(e.Data) || task.Status == "cancelled") return;
                 lastOutput = e.Data;
 
                 var line = e.Data;
@@ -98,22 +130,25 @@ public class YouTubeDownloadService
                     if (match.Success)
                     {
                         var pct = match.Groups[1].Value;
+                        task.Status = "downloading";
                         task.Progress = $"下載中 ({pct})...";
                     }
                 }
                 else if (line.Contains("[ExtractAudio]") || line.Contains("[FixupM4a]"))
                 {
+                    task.Status = "processing";
                     task.Progress = "轉碼 MP3 中 (192k)...";
                 }
                 else if (line.Contains("[youtube]") || line.Contains("[info]"))
                 {
+                    task.Status = "processing";
                     task.Progress = "擷取音訊資料中...";
                 }
             };
 
             proc.ErrorDataReceived += (s, e) =>
             {
-                if (!string.IsNullOrWhiteSpace(e.Data))
+                if (!string.IsNullOrWhiteSpace(e.Data) && task.Status != "cancelled")
                 {
                     lastOutput = e.Data;
                 }
@@ -123,6 +158,11 @@ public class YouTubeDownloadService
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
             proc.WaitForExit();
+
+            if (task.Status == "cancelled")
+            {
+                return;
+            }
 
             if (proc.ExitCode == 0)
             {
@@ -139,9 +179,16 @@ public class YouTubeDownloadService
         }
         catch (Exception ex)
         {
-            task.Status = "failed";
-            task.Error = ex.Message;
-            task.Progress = $"錯誤: {ex.Message}";
+            if (task.Status != "cancelled")
+            {
+                task.Status = "failed";
+                task.Error = ex.Message;
+                task.Progress = $"錯誤: {ex.Message}";
+            }
+        }
+        finally
+        {
+            task.RunningProcess = null;
         }
     }
 }

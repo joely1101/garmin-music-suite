@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 using GarminMusicStudio.Models;
 using GarminMusicStudio.Services;
@@ -11,6 +10,7 @@ public class PodcastViewModel : ViewModelBase
 {
     private readonly MainViewModel _mainVM;
     private string _searchQuery = string.Empty;
+    private string _targetFolder = "podcast";
     private bool _isSearching;
     private bool _isLoadingEpisodes;
     private PodcastSearchResult? _selectedPodcast;
@@ -19,6 +19,12 @@ public class PodcastViewModel : ViewModelBase
     {
         get => _searchQuery;
         set => SetField(ref _searchQuery, value);
+    }
+
+    public string TargetFolder
+    {
+        get => _targetFolder;
+        set => SetField(ref _targetFolder, value);
     }
 
     public bool IsSearching
@@ -47,15 +53,32 @@ public class PodcastViewModel : ViewModelBase
 
     public ObservableCollection<PodcastSearchResult> SearchResults { get; } = new();
     public ObservableCollection<PodcastEpisode> Episodes { get; } = new();
+    public ObservableCollection<DownloadTask> Tasks => PodcastService.Instance.Tasks;
+    public ObservableCollection<string> Folders => _mainVM.TargetFolders;
 
     public ICommand SearchCommand { get; }
     public ICommand DownloadEpisodeCommand { get; }
+    public ICommand CancelTaskCommand { get; }
+    public ICommand DeleteTaskCommand { get; }
+    public ICommand ClearTasksCommand { get; }
 
     public PodcastViewModel(MainViewModel mainVM)
     {
         _mainVM = mainVM;
         SearchCommand = new AsyncRelayCommand(SearchAsync);
-        DownloadEpisodeCommand = new AsyncRelayCommand(DownloadEpisodeItemAsync);
+        DownloadEpisodeCommand = new RelayCommand(DownloadEpisodeItem);
+        CancelTaskCommand = new RelayCommand(param =>
+        {
+            if (param is DownloadTask t) PodcastService.Instance.CancelTask(t);
+        });
+        DeleteTaskCommand = new RelayCommand(param =>
+        {
+            if (param is DownloadTask t) PodcastService.Instance.DeleteTask(t);
+        });
+        ClearTasksCommand = new RelayCommand(param =>
+        {
+            PodcastService.Instance.ClearTasks();
+        });
     }
 
     private async Task SearchAsync()
@@ -93,20 +116,15 @@ public class PodcastViewModel : ViewModelBase
         }
     }
 
-    private async Task DownloadEpisodeItemAsync(object? param)
+    private void DownloadEpisodeItem(object? param)
     {
         if (param is PodcastEpisode ep)
         {
-            var targetFolder = _mainVM.SelectedFolder?.Name;
-            if (string.IsNullOrEmpty(targetFolder) || targetFolder == "全部歌曲")
-                targetFolder = "音樂";
+            var target = string.IsNullOrWhiteSpace(TargetFolder) || TargetFolder == "全部歌曲" || TargetFolder == "全部目錄"
+                ? "podcast"
+                : TargetFolder.Trim();
 
-            var ok = await PodcastService.Instance.DownloadEpisodeAsync(ep, targetFolder);
-            if (ok)
-            {
-                await _mainVM.WatchSyncVM.LoadLocalTracksAsync();
-                await _mainVM.RefreshFoldersAsync();
-            }
+            PodcastService.Instance.StartDownload(ep, target, SelectedPodcast?.Artist ?? SelectedPodcast?.Title);
         }
     }
 }

@@ -321,8 +321,10 @@ public class WatchSyncViewModel : ViewModelBase
         LocalFolderGroups.Clear();
         foreach (var g in groups)
         {
+            var tracks = g.ToList();
+            if (tracks.Count == 0) continue;
             var groupVm = new LocalFolderGroup(g.Key);
-            foreach (var track in g) groupVm.Tracks.Add(track);
+            foreach (var track in tracks) groupVm.Tracks.Add(track);
             LocalFolderGroups.Add(groupVm);
         }
 
@@ -354,8 +356,10 @@ public class WatchSyncViewModel : ViewModelBase
         WatchFolderGroups.Clear();
         foreach (var g in groups)
         {
+            var tracks = g.ToList();
+            if (tracks.Count == 0) continue;
             var groupVm = new WatchFolderGroup(g.Key);
-            foreach (var track in g) groupVm.Tracks.Add(track);
+            foreach (var track in tracks) groupVm.Tracks.Add(track);
             WatchFolderGroups.Add(groupVm);
         }
 
@@ -600,6 +604,7 @@ public class WatchSyncViewModel : ViewModelBase
     private void PromptAddFolder()
     {
         var dialog = new Views.InputDialog("新增分類目錄", "請輸入新目錄名稱 (例如: 跑步音樂、流行歌):");
+        dialog.Owner = Application.Current.MainWindow;
         if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(dialog.InputText))
         {
             var folderName = dialog.InputText.Trim();
@@ -610,7 +615,6 @@ public class WatchSyncViewModel : ViewModelBase
                 {
                     Directory.CreateDirectory(targetDir);
                     _ = _mainVM.RefreshFoldersAsync();
-                    LocalFilterFolders.Add(folderName);
                 }
             }
             catch (Exception ex)

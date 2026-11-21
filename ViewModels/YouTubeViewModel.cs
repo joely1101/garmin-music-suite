@@ -40,14 +40,29 @@ public class YouTubeViewModel : ViewModelBase
     }
 
     public ObservableCollection<DownloadTask> Tasks => YouTubeDownloadService.Instance.Tasks;
-    public ObservableCollection<FolderItem> Folders => _mainVM.Folders;
+    public ObservableCollection<string> Folders => _mainVM.TargetFolders;
 
     public ICommand StartDownloadCommand { get; }
+    public ICommand CancelTaskCommand { get; }
+    public ICommand DeleteTaskCommand { get; }
+    public ICommand ClearTasksCommand { get; }
 
     public YouTubeViewModel(MainViewModel mainVM)
     {
         _mainVM = mainVM;
         StartDownloadCommand = new RelayCommand(StartDownload);
+        CancelTaskCommand = new RelayCommand(param =>
+        {
+            if (param is DownloadTask t) YouTubeDownloadService.Instance.CancelTask(t);
+        });
+        DeleteTaskCommand = new RelayCommand(param =>
+        {
+            if (param is DownloadTask t) YouTubeDownloadService.Instance.DeleteTask(t);
+        });
+        ClearTasksCommand = new RelayCommand(param =>
+        {
+            YouTubeDownloadService.Instance.ClearTasks();
+        });
     }
 
     private void StartDownload()
@@ -58,7 +73,10 @@ public class YouTubeViewModel : ViewModelBase
             return;
         }
 
-        var target = string.IsNullOrWhiteSpace(TargetFolder) || TargetFolder == "全部歌曲" ? "音樂" : TargetFolder;
+        var target = string.IsNullOrWhiteSpace(TargetFolder) || TargetFolder == "全部歌曲" || TargetFolder == "全部目錄"
+            ? "音樂"
+            : TargetFolder.Trim();
+
         YouTubeDownloadService.Instance.StartDownload(Url.Trim(), target, DownloadPlaylist);
         Url = string.Empty;
     }

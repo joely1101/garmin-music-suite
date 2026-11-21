@@ -218,27 +218,54 @@ public class DatabaseService
             conn.Open();
 
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT folder, COUNT(*) FROM tracks GROUP BY folder ORDER BY folder ASC";
+            cmd.CommandText = "SELECT folder, COUNT(*) FROM tracks GROUP BY folder HAVING COUNT(*) > 0 ORDER BY folder ASC";
             using var reader = cmd.ExecuteReader();
             int total = 0;
             while (reader.Read())
             {
                 var f = reader.GetString(0);
                 var c = reader.GetInt32(1);
-                total += c;
-                folders.Add(new FolderItem { Name = f, Count = c });
+                if (c > 0)
+                {
+                    total += c;
+                    folders.Add(new FolderItem { Name = f, Count = c });
+                }
             }
 
-            // Ensure "音樂" exists
-            if (!folders.Exists(x => x.Name == "音樂"))
+            if (total > 0)
             {
-                folders.Insert(0, new FolderItem { Name = "音樂", Count = 0 });
+                folders.Insert(0, new FolderItem { Name = "全部歌曲", Count = total });
             }
-
-            // Insert "全部歌曲"
-            folders.Insert(0, new FolderItem { Name = "全部歌曲", Count = total });
             return folders;
         });
+    }
+
+    public List<string> GetAvailableTargetFolders()
+    {
+        var list = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        list.Add("音樂");
+        list.Add("podcast");
+
+        try
+        {
+            if (Directory.Exists(MusicDir))
+            {
+                foreach (var dir in Directory.GetDirectories(MusicDir))
+                {
+                    var dirName = Path.GetFileName(dir);
+                    if (!string.IsNullOrWhiteSpace(dirName))
+                    {
+                        list.Add(dirName);
+                    }
+                }
+            }
+        }
+        catch { }
+
+        list.Remove("全部歌曲");
+        list.Remove("全部目錄");
+
+        return list.OrderBy(x => x).ToList();
     }
 
     public void CreateFolder(string folderName)
