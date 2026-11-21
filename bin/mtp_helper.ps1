@@ -575,34 +575,91 @@ function List-MTPFiles {
     # 遞迴掃描 MTP 目錄下所有音樂與播放清單檔案
     function Recurse-MTPFolder($f, $rel) {
         $result = @()
+        $items = $null
         try {
             $items = $f.Items()
-            if (!$items) { return @() }
         } catch {
             Write-MtpLog "ERROR" "Recurse-MTPFolder failed to get items: $_"
             return @()
         }
+        if (!$items) {
+            Write-MtpLog "DEBUG" "Recurse-MTPFolder: folder '$rel' returned null Items()"
+            return @()
+        }
 
-        foreach ($item in $items) {
+        # 檢索所有項目（相容 Windows 10 COM IEnumVARIANT 與 index 索引方式）
+        $itemList = @()
+        $cnt = 0
+        try { $cnt = $items.Count } catch {}
+        Write-MtpLog "DEBUG" "Recurse-MTPFolder: folder '$rel' reports $cnt items"
+
+        if ($cnt -gt 0) {
+            for ($i = 0; $i -lt $cnt; $i++) {
+                try {
+                    $it = $items.Item($i)
+                    if ($it) { $itemList += $it }
+                } catch {}
+            }
+        }
+
+        if ($itemList.Count -eq 0) {
+            try {
+                foreach ($it in $items) {
+                    if ($it) { $itemList += $it }
+                }
+            } catch {
+                Write-MtpLog "WARN" "Recurse-MTPFolder: foreach loop threw: $_"
+            }
+        }
+
+        Write-MtpLog "DEBUG" "Recurse-MTPFolder: folder '$rel' retrieved $($itemList.Count) items to inspect"
+
+        foreach ($item in $itemList) {
             try {
                 $isFolder = $false
                 try { $isFolder = $item.IsFolder } catch {}
+
+                $itemName = ""
+                try { $itemName = [string]$item.Name } catch {}
+                $itemType = ""
+                try { $itemType = [string]$item.Type } catch {}
+                $itemPath = ""
+                try { $itemPath = [string]$item.Path } catch {}
 
                 if ($isFolder) {
                     $subF = $null
                     try { $subF = $item.GetFolder } catch {}
                     if ($subF) {
-                        $nextRel = if ($rel) { "$rel\$($item.Name)" } else { $item.Name }
+                        $nextRel = if ($rel) { "$rel\$itemName" } else { $itemName }
                         $subResults = Recurse-MTPFolder $subF $nextRel
                         if ($subResults) { $result += $subResults }
                     }
                 } else {
-                    $name = ""
-                    try { $name = [string]$item.Name } catch {}
-                    if ([string]::IsNullOrWhiteSpace($name)) { continue }
+                    if ([string]::IsNullOrWhiteSpace($itemName)) { continue }
 
-                    $ext = [System.IO.Path]::GetExtension($name).ToLowerInvariant()
-                    if ($ext -in @('.mp3', '.m4a', '.aac', '.flac', '.wav', '.wma', '.ogg', '.m3u', '.m3u8')) {
+                    # 1. 從檔名取得副檔名
+                    $ext = [System.IO.Path]::GetExtension($itemName).ToLowerInvariant()
+
+                    # 2. 若系統隱藏已知副檔名，嘗試從虛擬路徑取得副檔名
+                    if ([string]::IsNullOrWhiteSpace($ext) -and !([string]::IsNullOrWhiteSpace($itemPath))) {
+                        $ext = [System.IO.Path]::GetExtension($itemPath).ToLowerInvariant()
+                    }
+
+                    # 3. 若仍無副檔名，從 Windows Shell 檔案類型判斷（例如 "MP3 音訊", "Audio", "FLAC", "播放清單"）
+                    $isAudioByType = $false
+                    if ([string]::IsNullOrWhiteSpace($ext) -and !([string]::IsNullOrWhiteSpace($itemType))) {
+                        if ($itemType -match "(?i)MP3|M4A|AAC|FLAC|WAV|WMA|OGG|Audio|音訊|音频|聲音|声音") {
+                            $isAudioByType = $true
+                            $ext = ".mp3"
+                        } elseif ($itemType -match "(?i)Playlist|播放清單|播放列表") {
+                            $isAudioByType = $true
+                            $ext = ".m3u8"
+                        }
+                    }
+
+                    $isAudioOrPlaylist = ($ext -in @('.mp3', '.m4a', '.aac', '.flac', '.wav', '.wma', '.ogg', '.m3u', '.m3u8')) -or $isAudioByType
+
+                    if ($isAudioOrPlaylist) {
                         $sizeStr = ""
                         try { $sizeStr = [string]$f.GetDetailsOf($item, 2) } catch {}
 
@@ -613,10 +670,10 @@ function List-MTPFiles {
 
                         $isPlaylist = ($ext -eq '.m3u' -or $ext -eq '.m3u8')
                         $folderName = if ($isPlaylist) { "手機撥放清單" } elseif ($rel) { $rel.Split('\')[0] } else { "手機撥放清單" }
-                        $fileRel = if ($rel) { "$rel\$name" } else { $name }
+                        $fileRel = if ($rel) { "$rel\$itemName" } else { $itemName }
 
                         $result += [PSCustomObject]@{
-                            name        = $name
+                            name        = $itemName
                             folder      = $folderName
                             sub_folder  = $folderName
                             rel_path    = $fileRel
@@ -624,6 +681,9 @@ function List-MTPFiles {
                             size        = $fileSize
                             path        = "mtp:\$DevName\$RelPath\$fileRel"
                         }
+                        Write-MtpLog "INFO" "Matched audio item: '$itemName' (ext: '$ext', type: '$itemType', size: '$sizeStr')"
+                    } else {
+                        Write-MtpLog "DEBUG" "Skipped item: '$itemName' (ext: '$ext', type: '$itemType')"
                     }
                 }
             } catch {
@@ -634,6 +694,26 @@ function List-MTPFiles {
     }
 
     $allFiles = @(Recurse-MTPFolder $folder "")
+    
+    # 若在預設目錄下找為 0 首，自動嘗試 Garmin 常見備援目錄
+    if ($allFiles.Count -eq 0) {
+        Write-MtpLog "WARN" "List-MTPFiles: 0 files found in '$RelPath'. Checking alternate Garmin locations on '$DevName'..."
+        $candidates = @("Internal Storage\GARMIN\Music", "GARMIN\Music", "Internal Storage\Audio", "內部儲存空間\GARMIN\Music", "內部儲存空間\Audio")
+        foreach ($alt in $candidates) {
+            if ($alt -eq $RelPath) { continue }
+            $altFolder = Get-MTPFolderItem -DevName $DevName -RelPath $alt
+            if ($altFolder) {
+                Write-MtpLog "INFO" "List-MTPFiles: Trying alternate location '$alt'..."
+                $altFiles = @(Recurse-MTPFolder $altFolder "")
+                if ($altFiles.Count -gt 0) {
+                    Write-MtpLog "INFO" "List-MTPFiles: Found $($altFiles.Count) files in '$alt'!"
+                    $allFiles = $altFiles
+                    break
+                }
+            }
+        }
+    }
+
     Write-MtpLog "INFO" "List-MTPFiles complete. Total audio/playlist files found: $($allFiles.Count)"
     return @($allFiles)
 }
