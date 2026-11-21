@@ -15,11 +15,13 @@ public class DependencyService
     public string BinDir { get; }
     public string YtDlpPath { get; }
     public string FfmpegPath { get; }
+    public string FfprobePath { get; }
     public string MtpHelperPath { get; }
 
     public bool IsYtDlpReady => File.Exists(YtDlpPath);
     public bool IsFfmpegReady => File.Exists(FfmpegPath);
-    public bool IsAllReady => IsYtDlpReady && IsFfmpegReady && File.Exists(MtpHelperPath);
+    public bool IsFfprobeReady => File.Exists(FfprobePath);
+    public bool IsAllReady => IsYtDlpReady && IsFfmpegReady && IsFfprobeReady && File.Exists(MtpHelperPath);
 
     public event Action<string>? OnStatusChanged;
     public bool IsDownloadingDependencies { get; private set; }
@@ -32,6 +34,7 @@ public class DependencyService
 
         YtDlpPath = Path.Combine(BinDir, "yt-dlp.exe");
         FfmpegPath = Path.Combine(BinDir, "ffmpeg.exe");
+        FfprobePath = Path.Combine(BinDir, "ffprobe.exe");
         MtpHelperPath = Path.Combine(BinDir, "mtp_helper.ps1");
     }
 
@@ -43,6 +46,7 @@ public class DependencyService
         ExtractEmbeddedBinary("mtp_helper.ps1", MtpHelperPath);
         ExtractEmbeddedBinary("yt-dlp.exe", YtDlpPath);
         ExtractEmbeddedBinary("ffmpeg.exe", FfmpegPath);
+        ExtractEmbeddedBinary("ffprobe.exe", FfprobePath);
 
         if (IsAllReady)
         {

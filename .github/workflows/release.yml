@@ -33,27 +33,21 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path "bin"
           
-          # Download yt-dlp
+          # 1. Download yt-dlp.exe
           Write-Host "Downloading yt-dlp.exe..."
           Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile "bin/yt-dlp.exe"
           
-          # Get ffmpeg & ffprobe (pre-installed or via choco)
-          $ffmpegCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
-          if (-not $ffmpegCmd) {
-            Write-Host "Installing ffmpeg via choco..."
-            choco install ffmpeg -y --no-progress
-            $ffmpegCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
-          }
-          
-          if ($ffmpegCmd) {
-            $ffmpegDir = Split-Path -Parent $ffmpegCmd.Source
-            Copy-Item "$ffmpegDir/ffmpeg.exe" "bin/" -Force
-            if (Test-Path "$ffmpegDir/ffprobe.exe") {
-              Copy-Item "$ffmpegDir/ffprobe.exe" "bin/" -Force
-            }
-          }
+          # 2. Download genuine standalone ffmpeg & ffprobe binaries (avoiding chocolatey 392KB shims)
+          Write-Host "Downloading ffmpeg essentials build..."
+          Invoke-WebRequest -Uri "https://github.com/GyanD/codexffmpeg/releases/download/7.1/ffmpeg-7.1-essentials_build.zip" -OutFile "ffmpeg.zip"
+          Expand-Archive -Path "ffmpeg.zip" -DestinationPath "ffmpeg_extracted" -Force
+          $realFfmpeg = Get-ChildItem -Path "ffmpeg_extracted" -Filter "ffmpeg.exe" -Recurse | Select-Object -First 1
+          Copy-Item $realFfmpeg.FullName "bin/ffmpeg.exe" -Force
+          $realFfprobe = Get-ChildItem -Path "ffmpeg_extracted" -Filter "ffprobe.exe" -Recurse | Select-Object -First 1
+          Copy-Item $realFfprobe.FullName "bin/ffprobe.exe" -Force
+          Remove-Item "ffmpeg.zip", "ffmpeg_extracted" -Recurse -Force
 
-          Get-ChildItem -Path "bin"
+          Get-ChildItem -Path "bin" | Select-Object Name, Length
 
       - name: Publish GarminMusicStudio Standalone (.exe)
         shell: pwsh
@@ -71,6 +65,7 @@ jobs:
           # 2. Individual helper binaries for direct download / auto-download
           Copy-Item "bin/yt-dlp.exe" "release_assets/yt-dlp.exe"
           Copy-Item "bin/ffmpeg.exe" "release_assets/ffmpeg.exe"
+          Copy-Item "bin/ffprobe.exe" "release_assets/ffprobe.exe"
           
           # 3. Complete portable zip bundle (including bin/ dependencies: ffmpeg, ffprobe, yt-dlp, mtp_helper.ps1)
           New-Item -ItemType Directory -Force -Path "bundle/GarminMusicStudio/bin"
@@ -127,4 +122,5 @@ jobs:
             release_assets/GarminMusicStudio.exe
             release_assets/GarminMusicStudio-win-x64-bundle.zip
             release_assets/ffmpeg.exe
+            release_assets/ffprobe.exe
             release_assets/yt-dlp.exe

@@ -105,9 +105,9 @@ public class YouTubeDownloadService
                 cleanUrl = Regex.Replace(cleanUrl, @"[?&]list=[^&]+", "");
             }
 
-            if (!File.Exists(_ytDlpPath) || !File.Exists(Path.Combine(_ffmpegDir, "ffmpeg.exe")))
+            if (!File.Exists(_ytDlpPath) || !File.Exists(Path.Combine(_ffmpegDir, "ffmpeg.exe")) || !File.Exists(Path.Combine(_ffmpegDir, "ffprobe.exe")))
             {
-                task.Progress = "正在自動補充必備組件 (yt-dlp/ffmpeg)...";
+                task.Progress = "正在自動補充必備組件 (yt-dlp/ffmpeg/ffprobe)...";
                 await DependencyService.Instance.EnsureDependenciesAsync();
             }
 

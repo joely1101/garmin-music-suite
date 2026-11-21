@@ -21,6 +21,7 @@
     <EmbeddedResource Include="bin\mtp_helper.ps1" />
     <EmbeddedResource Include="bin\yt-dlp.exe" />
     <EmbeddedResource Include="bin\ffmpeg.exe" />
+    <EmbeddedResource Include="bin\ffprobe.exe" />
   </ItemGroup>
 
   <ItemGroup>
