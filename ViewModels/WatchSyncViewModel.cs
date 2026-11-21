@@ -14,8 +14,8 @@ namespace GarminMusicStudio.ViewModels;
 public class WatchSyncViewModel : ViewModelBase
 {
     private readonly MainViewModel _mainVM;
-    private string _localFolderFilter = "ALL";
-    private string _watchFolderFilter = "ALL";
+    private string _localFolderFilter = "全部目錄";
+    private string _watchFolderFilter = "全部手錶目錄";
     private string _localSearchText = string.Empty;
     private string _watchSearchText = string.Empty;
     private bool _isSelectAllLocal;
@@ -221,7 +221,7 @@ public class WatchSyncViewModel : ViewModelBase
     {
         if (string.IsNullOrEmpty(folder) || folder == "全部歌曲")
         {
-            LocalFolderFilter = "ALL";
+            LocalFolderFilter = "全部目錄";
         }
         else
         {
@@ -248,6 +248,11 @@ public class WatchSyncViewModel : ViewModelBase
         var folders = AllLocalTracks.Select(t => t.Folder).Where(f => !string.IsNullOrEmpty(f)).Distinct().OrderBy(f => f);
         foreach (var f in folders) LocalFilterFolders.Add(f);
 
+        if (string.IsNullOrEmpty(LocalFolderFilter) || !LocalFilterFolders.Contains(LocalFolderFilter))
+        {
+            LocalFolderFilter = "全部目錄";
+        }
+
         SyncWatchStatusFlags();
         ApplyLocalFilter();
     }
@@ -270,6 +275,11 @@ public class WatchSyncViewModel : ViewModelBase
         WatchFilterFolders.Add("全部手錶目錄");
         var folders = AllWatchTracks.Select(t => t.Folder).Where(f => !string.IsNullOrEmpty(f)).Distinct().OrderBy(f => f);
         foreach (var f in folders) WatchFilterFolders.Add(f);
+
+        if (string.IsNullOrEmpty(WatchFolderFilter) || !WatchFilterFolders.Contains(WatchFolderFilter))
+        {
+            WatchFolderFilter = "全部手錶目錄";
+        }
 
         SyncWatchStatusFlags();
         ApplyWatchFilter();

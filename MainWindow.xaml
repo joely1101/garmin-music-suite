@@ -7,6 +7,7 @@
         mc:Ignorable="d"
         Title="Garmin Music Suite" Height="820" Width="1280"
         MinHeight="650" MinWidth="960"
+        Icon="app.ico"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BrushBgDark}">
 
@@ -65,8 +66,8 @@
 
                 <!-- 1. App Header Logo -->
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="16,16,16,18">
-                    <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource BrushPrimaryOrange}" Margin="0,0,10,0">
-                        <TextBlock Text="⌚" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Width="34" Height="34" CornerRadius="8" Background="#261b11" BorderBrush="#59300a" BorderThickness="1" Margin="0,0,10,0">
+                        <Image Source="app.png" Width="28" Height="28" RenderOptions.BitmapScalingMode="HighQuality" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Garmin Studio" FontSize="15" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}"/>
