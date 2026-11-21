@@ -21,6 +21,31 @@ public class MtpService
     {
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         _mtpScriptPath = Path.Combine(baseDir, "bin", "mtp_helper.ps1");
+        EnsureMtpScriptExists();
+    }
+
+    private void EnsureMtpScriptExists()
+    {
+        try
+        {
+            if (!File.Exists(_mtpScriptPath))
+            {
+                var dir = Path.GetDirectoryName(_mtpScriptPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                var asm = System.Reflection.Assembly.GetExecutingAssembly();
+                using var stream = asm.GetManifestResourceStream("GarminMusicStudio.bin.mtp_helper.ps1");
+                if (stream != null)
+                {
+                    using var fs = File.Create(_mtpScriptPath);
+                    stream.CopyTo(fs);
+                }
+            }
+        }
+        catch { }
     }
 
     private async Task<string> RunPsCommandAsync(string arguments, int timeoutMs = 30000)

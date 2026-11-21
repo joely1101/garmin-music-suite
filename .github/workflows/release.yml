@@ -1,0 +1,115 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Release Windows Executable
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Prepare Binaries (ffmpeg, ffprobe, yt-dlp)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "bin"
+          
+          # Download yt-dlp
+          Write-Host "Downloading yt-dlp.exe..."
+          Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile "bin/yt-dlp.exe"
+          
+          # Get ffmpeg & ffprobe (pre-installed or via choco)
+          $ffmpegCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
+          if (-not $ffmpegCmd) {
+            Write-Host "Installing ffmpeg via choco..."
+            choco install ffmpeg -y --no-progress
+            $ffmpegCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
+          }
+          
+          if ($ffmpegCmd) {
+            $ffmpegDir = Split-Path -Parent $ffmpegCmd.Source
+            Copy-Item "$ffmpegDir/ffmpeg.exe" "bin/" -Force
+            if (Test-Path "$ffmpegDir/ffprobe.exe") {
+              Copy-Item "$ffmpegDir/ffprobe.exe" "bin/" -Force
+            }
+          }
+
+          Get-ChildItem -Path "bin"
+
+      - name: Publish GarminMusicStudio Standalone (.exe)
+        shell: pwsh
+        run: |
+          dotnet publish GarminMusicStudio.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o release_output
+
+      - name: Package Release Assets
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "release_assets"
+          
+          # 1. Standalone single-file .exe
+          Copy-Item "release_output/GarminMusicStudio.exe" "release_assets/GarminMusicStudio.exe"
+          
+          # 2. Complete portable zip bundle (including bin/ dependencies: ffmpeg, ffprobe, yt-dlp, mtp_helper.ps1)
+          New-Item -ItemType Directory -Force -Path "bundle/GarminMusicStudio/bin"
+          Copy-Item "release_output/GarminMusicStudio.exe" "bundle/GarminMusicStudio/"
+          Copy-Item "bin/*" "bundle/GarminMusicStudio/bin/" -Recurse -Force
+          Compress-Archive -Path "bundle/GarminMusicStudio" -DestinationPath "release_assets/GarminMusicStudio-win-x64-bundle.zip"
+          
+          Get-ChildItem -Path "release_assets"
+
+      - name: Determine Release Tag
+        id: get_tag
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -notmatch '^v\d') {
+            $tag = "${{ github.event.inputs.version }}"
+            if (-not $tag) { $tag = "v1.0.0" }
+          }
+          Write-Host "Release Tag: $tag"
+          "TAG_NAME=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: Garmin Music Studio ${{ env.TAG_NAME }}
+          body: |
+            ## Garmin Music Studio ${{ env.TAG_NAME }}
+            
+            ### 發行內容說明 / Release Notes
+            - **GarminMusicStudio.exe**: 單一獨立執行檔 (無需安裝 .NET，隨開即用)。
+            - **GarminMusicStudio-win-x64-bundle.zip**: 完整綠色便攜包（內含本機 MTP 傳輸腳本、YouTube 音樂下載器 `yt-dlp` 與 `ffmpeg` 音訊轉換組件）。
+            
+            ### 主要功能
+            - 支援 Garmin 手錶（Forerunner 255/265/965、Fēnix 系列等）MTP 隨插即連與同步
+            - 智慧手錶目錄分類與雙向歌單維護
+            - 繁體中文 / 萬國碼歌名亂碼自動修正
+            - 建立相容 Garmin 手錶的 UTF-8 M3U8 播放清單
+            - 內建 Subsonic WiFi 無線音訊伺服器
+            - YouTube 音樂快速下載與轉檔 (192kbps MP3)
+            - 內建本機音訊試聽播放器
+          draft: false
+          prerelease: false
+          files: |
+            release_assets/GarminMusicStudio.exe
+            release_assets/*.zip

@@ -7,11 +7,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>app.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <ProductName>Garmin Music Studio</ProductName>
+    <Description>Garmin Music Studio Desktop Edition</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <Resource Include="app.ico" />
     <Resource Include="app.png" />
+    <EmbeddedResource Include="bin\mtp_helper.ps1" />
   </ItemGroup>
 
   <ItemGroup>
