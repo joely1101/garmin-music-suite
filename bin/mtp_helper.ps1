@@ -119,7 +119,7 @@ function Get-MTPFolderItem {
         if (!$child -and $Create) {
             try {
                 $folder.NewFolder($part.Trim())
-                Start-Sleep -Milliseconds 250
+                Start-Sleep -Milliseconds 350
                 $child = $folder.Items() | Where-Object { $_.Name.Trim() -eq $part.Trim() } | Select-Object -First 1
             } catch {}
         }
@@ -203,15 +203,67 @@ function List-MTPSubfolders {
 
 function Copy-FileToMTP {
     param([string]$DevName, [string]$RelPath, [string]$SrcFile)
+    if (!(Test-Path $SrcFile)) {
+        return [PSCustomObject]@{ success = $false; error = "本機來源檔案不存在: $SrcFile" }
+    }
+
     $folder = Get-MTPFolderItem -DevName $DevName -RelPath $RelPath -Create
     if (!$folder) {
         return [PSCustomObject]@{ success = $false; error = "找不到或無法建立目標資料夾: $RelPath" }
     }
+
+    $srcFileName = [System.IO.Path]::GetFileName($SrcFile)
+    $srcItem = Get-Item $SrcFile
+    $srcSize = $srcItem.Length
+
+    # If the file already exists on the watch, delete it first to ensure clean copy & detection
     try {
+        $existing = $folder.Items() | Where-Object { $_.Name -eq $srcFileName } | Select-Object -First 1
+        if ($existing) {
+            $existing.InvokeVerb("delete")
+            Start-Sleep -Milliseconds 500
+        }
+    } catch {}
+
+    try {
+        # CopyHere with options: 16 (Yes to all) + 512 (Do not confirm directory creation)
         $folder.CopyHere($SrcFile, 16 + 512)
-        return [PSCustomObject]@{ success = $true }
     } catch {
         return [PSCustomObject]@{ success = $false; error = $_.Exception.Message }
+    }
+
+    # Asynchronous completion polling
+    # Shell.Application CopyHere transfers in the background. We must wait until the file appears and stabilizes.
+    $timeoutSeconds = [Math]::Max(45, [int]($srcSize / (1024 * 1024)) * 3 + 15)
+    $start = [DateTime]::UtcNow
+    $found = $null
+    $lastSizeStr = ""
+    $stableCount = 0
+
+    while (([DateTime]::UtcNow - $start).TotalSeconds -lt $timeoutSeconds) {
+        Start-Sleep -Milliseconds 800
+        $found = $folder.Items() | Where-Object { $_.Name -eq $srcFileName } | Select-Object -First 1
+        if ($found) {
+            $curSizeStr = $folder.GetDetailsOf($found, 2)
+            if ($curSizeStr -and $curSizeStr -eq $lastSizeStr) {
+                $stableCount++
+                if ($stableCount -ge 2) {
+                    # Transfer complete and stabilized!
+                    break
+                }
+            } else {
+                $lastSizeStr = $curSizeStr
+                $stableCount = 0
+            }
+        }
+    }
+
+    if ($found) {
+        # Ensure file handle release
+        Start-Sleep -Milliseconds 500
+        return [PSCustomObject]@{ success = $true }
+    } else {
+        return [PSCustomObject]@{ success = $false; error = "檔案傳輸逾時，目標資料夾未在時間內完成寫入 ($srcFileName)" }
     }
 }
 

@@ -479,7 +479,7 @@ public class MtpService
             var folder = (string.IsNullOrEmpty(track.Folder) || track.Folder == "全部歌曲") ? "" : track.Folder;
             var targetSub = string.IsNullOrEmpty(folder) ? subPath : Path.Combine(subPath, folder);
 
-            var res = await RunPsCommandAsync($"-Action copy_file -DeviceName \"{devName}\" -SubPath \"{targetSub}\" -SourceFile \"{localFile}\"", timeoutMs: 60000);
+            var res = await RunPsCommandAsync($"-Action copy_file -DeviceName \"{devName}\" -SubPath \"{targetSub}\" -SourceFile \"{localFile}\"", timeoutMs: 180000);
             return res.Contains("\"success\": true") || res.Contains("\"success\":true");
         }
     }
