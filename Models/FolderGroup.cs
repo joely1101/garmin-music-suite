@@ -8,7 +8,7 @@ namespace GarminMusicStudio.Models;
 public class LocalFolderGroup : ViewModelBase
 {
     private string _name = string.Empty;
-    private bool _isExpanded = true;
+    private bool _isExpanded = false;
     private bool _isSelected;
 
     public string Name
@@ -69,7 +69,7 @@ public class LocalFolderGroup : ViewModelBase
 public class WatchFolderGroup : ViewModelBase
 {
     private string _name = string.Empty;
-    private bool _isExpanded = true;
+    private bool _isExpanded = false;
     private bool _isSelected;
 
     public string Name

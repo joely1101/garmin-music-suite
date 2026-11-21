@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -190,6 +191,7 @@ public class WatchSyncViewModel : ViewModelBase
     public ICommand RefreshLocalCommand { get; }
     public ICommand RefreshWatchCommand { get; }
     public ICommand AddFolderCommand { get; }
+    public ICommand OpenMusicDirCommand { get; }
 
     public WatchSyncViewModel(MainViewModel mainVM)
     {
@@ -215,6 +217,29 @@ public class WatchSyncViewModel : ViewModelBase
             await _mainVM.RefreshWatchStatusAsync();
         });
         AddFolderCommand = new RelayCommand(PromptAddFolder);
+        OpenMusicDirCommand = new RelayCommand(OpenMusicDirectory);
+    }
+
+    private void OpenMusicDirectory()
+    {
+        try
+        {
+            var dir = DatabaseService.Instance.MusicDir;
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = dir,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"無法開啟音樂資料夾: {ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     public void FilterBySidebarFolder(string? folder)

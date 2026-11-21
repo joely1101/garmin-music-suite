@@ -58,6 +58,10 @@
                         <Button Style="{StaticResource FlatButton}" Content="🔄" Padding="10,5" Margin="0,0,6,0" FontSize="15"
                                 Command="{Binding RefreshLocalCommand}" ToolTip="重新掃描本地歌曲"/>
 
+                        <!-- Open Music Directory Button -->
+                        <Button Style="{StaticResource FlatButton}" Content="📂 開啟資料夾" Padding="12,5" Margin="0,0,6,0" FontSize="14"
+                                Command="{Binding OpenMusicDirCommand}" ToolTip="以 Windows 檔案總管開啟音樂資料夾"/>
+
                         <!-- Add Folder Button -->
                         <Button Style="{StaticResource FlatButton}" Content="➕ 新增目錄" Padding="12,5" FontSize="14"
                                 Command="{Binding AddFolderCommand}"/>

@@ -26,7 +26,8 @@ public class YouTubeViewModel : ViewModelBase
         get => _targetFolder;
         set
         {
-            if (SetField(ref _targetFolder, value) && !string.IsNullOrWhiteSpace(value))
+            if (string.IsNullOrWhiteSpace(value)) return;
+            if (SetField(ref _targetFolder, value))
             {
                 DatabaseService.Instance.SetSetting("youtube_target_folder", value);
             }

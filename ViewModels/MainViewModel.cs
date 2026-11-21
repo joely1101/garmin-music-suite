@@ -143,6 +143,20 @@ public class MainViewModel : ViewModelBase
         TargetFolders.Clear();
         foreach (var t in targets) TargetFolders.Add(t);
 
+        var savedYt = DatabaseService.Instance.GetSetting("youtube_target_folder", "音樂");
+        if (!string.IsNullOrWhiteSpace(savedYt) && !TargetFolders.Contains(savedYt))
+        {
+            TargetFolders.Add(savedYt);
+        }
+        YouTubeVM.TargetFolder = savedYt;
+
+        var savedPod = DatabaseService.Instance.GetSetting("podcast_target_folder", "podcast");
+        if (!string.IsNullOrWhiteSpace(savedPod) && !TargetFolders.Contains(savedPod))
+        {
+            TargetFolders.Add(savedPod);
+        }
+        PodcastVM.TargetFolder = savedPod;
+
         if (SelectedFolder == null && Folders.Count > 0)
         {
             SelectedFolder = Folders[0];
