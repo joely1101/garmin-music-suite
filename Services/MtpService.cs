@@ -22,7 +22,7 @@ public class MtpService
         _mtpScriptPath = Path.Combine(baseDir, "bin", "mtp_helper.ps1");
     }
 
-    private async Task<string> RunPsCommandAsync(string arguments)
+    private async Task<string> RunPsCommandAsync(string arguments, int timeoutMs = 30000)
     {
         if (!File.Exists(_mtpScriptPath)) return string.Empty;
 
@@ -43,7 +43,10 @@ public class MtpService
                 using var proc = Process.Start(psi);
                 if (proc == null) return string.Empty;
                 var output = proc.StandardOutput.ReadToEnd();
-                proc.WaitForExit(10000);
+                if (!proc.WaitForExit(timeoutMs))
+                {
+                    try { proc.Kill(); } catch { }
+                }
                 return output.Trim();
             }
             catch (Exception ex)
@@ -171,14 +174,7 @@ public class MtpService
                     var rel = Path.GetRelativePath(musicDir, file).Replace('\\', '/');
                     var fi = new FileInfo(file);
                     var title = Path.GetFileNameWithoutExtension(file);
-                    var artist = "Unknown";
-                    try
-                    {
-                        using var tfile = TagLib.File.Create(file);
-                        if (!string.IsNullOrWhiteSpace(tfile.Tag.Title)) title = tfile.Tag.Title;
-                        if (!string.IsNullOrWhiteSpace(tfile.Tag.FirstPerformer)) artist = tfile.Tag.FirstPerformer;
-                    }
-                    catch { }
+                    var artist = "Garmin Watch";
 
                     var folder = Path.GetDirectoryName(rel)?.Replace('\\', '/');
                     if (string.IsNullOrEmpty(folder) || folder == ".") folder = "音樂";
@@ -237,7 +233,7 @@ public class MtpService
         return tracks;
     }
 
-    public async Task<bool> SyncTrackToWatchAsync(WatchDevice device, Track track)
+    public async Task<bool> SyncTrackToWatchAsync(WatchDevice device, Track track, IProgress<double>? progress = null)
     {
         if (!device.IsConnected) return false;
 
@@ -246,7 +242,7 @@ public class MtpService
 
         if (!device.IsMtp)
         {
-            return await Task.Run(() =>
+            return await Task.Run(async () =>
             {
                 try
                 {
@@ -262,20 +258,56 @@ public class MtpService
                     var parent = Path.GetDirectoryName(destFile);
                     if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
 
-                    File.Copy(localFile, destFile, true);
+                    const int bufferSize = 256 * 1024;
+                    var fileLength = new FileInfo(localFile).Length;
+
+                    using (var sourceStream = new FileStream(localFile, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize, useAsync: true))
+                    using (var destStream = new FileStream(destFile, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, useAsync: true))
+                    {
+                        var buffer = new byte[bufferSize];
+                        long totalBytes = 0;
+                        int read;
+
+                        while ((read = await sourceStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                        {
+                            await destStream.WriteAsync(buffer, 0, read);
+                            totalBytes += read;
+                            if (fileLength > 0 && progress != null)
+                            {
+                                progress.Report((double)totalBytes / fileLength * 100.0);
+                            }
+                        }
+                        await destStream.FlushAsync();
+                    }
+
                     return true;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Debug.WriteLine($"Copy error: {ex.Message}");
                     return false;
                 }
             });
         }
         else
         {
+            // MTP device copy
+            string devName = device.Name;
+            string subPath = "Music";
+            var targetStr = device.DriveOrPath;
+            if (targetStr.StartsWith("mtp:\\", StringComparison.OrdinalIgnoreCase) || targetStr.StartsWith("mtp:/", StringComparison.OrdinalIgnoreCase))
+            {
+                var clean = targetStr.Substring(5).Replace('/', '\\').Trim('\\');
+                var parts = clean.Split('\\', 2);
+                devName = parts[0];
+                subPath = parts.Length > 1 ? parts[1] : "Music";
+            }
+
             var folder = string.IsNullOrEmpty(track.Folder) ? "音樂" : track.Folder;
-            var res = await RunPsCommandAsync($"copy_to_watch -sourceFile \"{localFile}\" -targetSubFolder \"{folder}\"");
-            return res.Contains("\"status\": \"ok\"") || res.Contains("copied");
+            var targetSub = string.IsNullOrEmpty(subPath) ? folder : Path.Combine(subPath, folder);
+
+            var res = await RunPsCommandAsync($"-Action copy_file -DeviceName \"{devName}\" -SubPath \"{targetSub}\" -SourceFile \"{localFile}\"", timeoutMs: 60000);
+            return res.Contains("\"success\": true") || res.Contains("\"success\":true");
         }
     }
 
@@ -306,8 +338,20 @@ public class MtpService
         }
         else
         {
-            var res = await RunPsCommandAsync($"delete_file -filePath \"{relOrFullPath}\"");
-            return res.Contains("\"status\": \"ok\"");
+            string devName = device.Name;
+            string subPath = "Music";
+            var targetStr = device.DriveOrPath;
+            if (targetStr.StartsWith("mtp:\\", StringComparison.OrdinalIgnoreCase) || targetStr.StartsWith("mtp:/", StringComparison.OrdinalIgnoreCase))
+            {
+                var clean = targetStr.Substring(5).Replace('/', '\\').Trim('\\');
+                var parts = clean.Split('\\', 2);
+                devName = parts[0];
+                subPath = parts.Length > 1 ? parts[1] : "Music";
+            }
+
+            var fileName = Path.GetFileName(relOrFullPath);
+            var res = await RunPsCommandAsync($"-Action delete_file -DeviceName \"{devName}\" -SubPath \"{subPath}\" -FileName \"{fileName}\"", timeoutMs: 20000);
+            return res.Contains("\"success\": true") || res.Contains("\"success\":true");
         }
     }
 

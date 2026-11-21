@@ -126,8 +126,16 @@ public class WatchSyncViewModel : ViewModelBase
     public int SelectedLocalCount
     {
         get => _selectedLocalCount;
-        set => SetField(ref _selectedLocalCount, value);
+        set
+        {
+            if (SetField(ref _selectedLocalCount, value))
+            {
+                OnPropertyChanged(nameof(HasSelectedLocal));
+            }
+        }
     }
+
+    public bool HasSelectedLocal => SelectedLocalCount > 0;
 
     private int _totalFilteredLocalCount;
     public int TotalFilteredLocalCount
@@ -140,8 +148,16 @@ public class WatchSyncViewModel : ViewModelBase
     public int SelectedWatchCount
     {
         get => _selectedWatchCount;
-        set => SetField(ref _selectedWatchCount, value);
+        set
+        {
+            if (SetField(ref _selectedWatchCount, value))
+            {
+                OnPropertyChanged(nameof(HasSelectedWatch));
+            }
+        }
     }
+
+    public bool HasSelectedWatch => SelectedWatchCount > 0;
 
     private int _totalFilteredWatchCount;
     public int TotalFilteredWatchCount
@@ -340,6 +356,8 @@ public class WatchSyncViewModel : ViewModelBase
     {
         SelectedLocalCount = LocalFolderGroups.SelectMany(g => g.Tracks).Count(t => t.IsSelected);
         SelectedWatchCount = WatchFolderGroups.SelectMany(g => g.Tracks).Count(t => t.IsSelected);
+        OnPropertyChanged(nameof(HasSelectedLocal));
+        OnPropertyChanged(nameof(HasSelectedWatch));
     }
 
     private void PlayTrack(object? param)
@@ -364,8 +382,13 @@ public class WatchSyncViewModel : ViewModelBase
             IsSyncing = true;
             try
             {
+                var progress = new Progress<double>(pct =>
+                {
+                    SyncStatusText = $"正在複製「{track.Title}」: {pct:F0}%";
+                });
+
                 SyncStatusText = $"正在複製「{track.Title}」至手錶...";
-                var ok = await MtpService.Instance.SyncTrackToWatchAsync(_mainVM.Watch, track);
+                var ok = await MtpService.Instance.SyncTrackToWatchAsync(_mainVM.Watch, track, progress);
                 if (ok)
                 {
                     SyncStatusText = "複製完成！";
@@ -373,8 +396,12 @@ public class WatchSyncViewModel : ViewModelBase
                 }
                 else
                 {
-                    MessageBox.Show("複製失敗，請檢查連線。", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("複製失敗，請檢查連線與儲存空間。", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"複製失敗: {ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -408,8 +435,13 @@ public class WatchSyncViewModel : ViewModelBase
             foreach (var t in selected)
             {
                 current++;
+                var progress = new Progress<double>(pct =>
+                {
+                    SyncStatusText = $"同步中 ({current}/{total}): {t.Title} ({pct:F0}%)...";
+                });
+
                 SyncStatusText = $"同步中 ({current}/{total}): {t.Title}...";
-                await MtpService.Instance.SyncTrackToWatchAsync(_mainVM.Watch, t);
+                await MtpService.Instance.SyncTrackToWatchAsync(_mainVM.Watch, t, progress);
             }
 
             SyncStatusText = "同步完成！";

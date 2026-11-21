@@ -83,7 +83,7 @@
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                             <Button Style="{StaticResource OrangeButton}" Padding="10,3" FontSize="11" Margin="0,0,8,0"
                                     Command="{Binding SyncSelectedCommand}"
-                                    Visibility="{Binding SelectedLocalCount, Converter={StaticResource BoolToVis}}">
+                                    Visibility="{Binding HasSelectedLocal, Converter={StaticResource BoolToVis}}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="➔ 複製到手錶 (" FontSize="11"/>
                                     <TextBlock Text="{Binding SelectedLocalCount}" FontSize="11"/>
@@ -92,7 +92,7 @@
                             </Button>
                             <Button Style="{StaticResource FlatButton}" Padding="8,3" FontSize="11" Foreground="{StaticResource BrushDanger}"
                                     Command="{Binding DeleteSelectedLocalCommand}"
-                                    Visibility="{Binding SelectedLocalCount, Converter={StaticResource BoolToVis}}">
+                                    Visibility="{Binding HasSelectedLocal, Converter={StaticResource BoolToVis}}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="🗑 刪除 (" FontSize="11"/>
                                     <TextBlock Text="{Binding SelectedLocalCount}" FontSize="11"/>
@@ -309,7 +309,7 @@
                         <!-- Batch Remove Button -->
                         <Button Grid.Column="2" Style="{StaticResource FlatButton}" Padding="8,3" FontSize="11" Foreground="{StaticResource BrushDanger}"
                                 Command="{Binding DeleteSelectedWatchCommand}"
-                                Visibility="{Binding SelectedWatchCount, Converter={StaticResource BoolToVis}}">
+                                Visibility="{Binding HasSelectedWatch, Converter={StaticResource BoolToVis}}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="🗑 從手錶移除 (" FontSize="11"/>
                                 <TextBlock Text="{Binding SelectedWatchCount}" FontSize="11"/>
