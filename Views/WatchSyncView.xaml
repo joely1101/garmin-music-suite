@@ -21,7 +21,7 @@
 
         <!-- ==================== TOP PANE: PC MUSIC LIBRARY ==================== -->
         <Border Grid.Row="0" Background="{StaticResource BrushCardBg}" BorderBrush="{StaticResource BrushCardBorder}" 
-                BorderThickness="1" CornerRadius="8" Padding="14">
+                BorderThickness="1" CornerRadius="8" Padding="16">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -30,7 +30,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- 1. Header Toolbar -->
-                <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid Grid.Row="0" Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -38,34 +38,34 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="💻 電腦音樂庫" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        <Border Background="#262626" CornerRadius="10" Padding="8,2" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding TotalFilteredLocalCount, StringFormat='{}{0} 首'}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"/>
+                        <TextBlock Text="💻 電腦音樂庫" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Border Background="#262626" CornerRadius="12" Padding="10,3" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding TotalFilteredLocalCount, StringFormat='{}{0} 首'}" FontSize="14" Foreground="{StaticResource BrushTextSecondary}"/>
                         </Border>
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- Folder Filter Dropdown -->
                         <ComboBox ItemsSource="{Binding LocalFilterFolders}" SelectedItem="{Binding LocalFolderFilter}"
-                                  Width="130" Height="30" Margin="0,0,8,0" VerticalContentAlignment="Center"/>
+                                  Width="150" Height="36" Margin="0,0,8,0" VerticalContentAlignment="Center" FontSize="15"/>
 
                         <!-- Search Box -->
                         <TextBox Text="{Binding LocalSearchText, UpdateSourceTrigger=PropertyChanged}" 
-                                 Width="160" Height="30" Margin="0,0,8,0" VerticalContentAlignment="Center"
-                                 Padding="8,4" FontSize="12"/>
+                                 Width="180" Height="36" Margin="0,0,8,0" VerticalContentAlignment="Center"
+                                 Padding="8,4" FontSize="15"/>
 
                         <!-- Refresh Button -->
-                        <Button Style="{StaticResource FlatButton}" Content="🔄" Padding="8,4" Margin="0,0,6,0"
+                        <Button Style="{StaticResource FlatButton}" Content="🔄" Padding="10,5" Margin="0,0,6,0" FontSize="15"
                                 Command="{Binding RefreshLocalCommand}" ToolTip="重新掃描本地歌曲"/>
 
                         <!-- Add Folder Button -->
-                        <Button Style="{StaticResource FlatButton}" Content="➕ 新增目錄" Padding="10,4" FontSize="11"
+                        <Button Style="{StaticResource FlatButton}" Content="➕ 新增目錄" Padding="12,5" FontSize="14"
                                 Command="{Binding AddFolderCommand}"/>
                     </StackPanel>
                 </Grid>
 
                 <!-- 2. Select-all and Batch Operation Bar -->
-                <Border Grid.Row="1" Background="#111111" CornerRadius="4" Padding="8,6" Margin="0,0,0,8">
+                <Border Grid.Row="1" Background="#111111" CornerRadius="6" Padding="10,8" Margin="0,0,0,10">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -74,29 +74,29 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <CheckBox IsChecked="{Binding IsSelectAllLocal}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding SelectedLocalCount, StringFormat='{}全選 ({0}/'}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding TotalFilteredLocalCount, StringFormat='{}{0})'}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                            <CheckBox IsChecked="{Binding IsSelectAllLocal}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding SelectedLocalCount, StringFormat='{}全選 ({0}/'}" FontSize="15" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding TotalFilteredLocalCount, StringFormat='{}{0})'}" FontSize="15" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
                         </StackPanel>
 
                         <!-- Batch Buttons (When items selected) -->
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource OrangeButton}" Padding="10,3" FontSize="11" Margin="0,0,8,0"
+                            <Button Style="{StaticResource OrangeButton}" Padding="12,4" FontSize="14" Margin="0,0,8,0"
                                     Command="{Binding SyncSelectedCommand}"
                                     Visibility="{Binding HasSelectedLocal, Converter={StaticResource BoolToVis}}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="➔ 複製到手錶 (" FontSize="11"/>
-                                    <TextBlock Text="{Binding SelectedLocalCount}" FontSize="11"/>
-                                    <TextBlock Text=")" FontSize="11"/>
+                                    <TextBlock Text="➔ 複製到手錶 (" FontSize="14"/>
+                                    <TextBlock Text="{Binding SelectedLocalCount}" FontSize="14"/>
+                                    <TextBlock Text=")" FontSize="14"/>
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource FlatButton}" Padding="8,3" FontSize="11" Foreground="{StaticResource BrushDanger}"
+                            <Button Style="{StaticResource FlatButton}" Padding="10,4" FontSize="14" Foreground="{StaticResource BrushDanger}"
                                     Command="{Binding DeleteSelectedLocalCommand}"
                                     Visibility="{Binding HasSelectedLocal, Converter={StaticResource BoolToVis}}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="🗑 刪除 (" FontSize="11"/>
-                                    <TextBlock Text="{Binding SelectedLocalCount}" FontSize="11"/>
-                                    <TextBlock Text=")" FontSize="11"/>
+                                    <TextBlock Text="🗑 刪除 (" FontSize="14"/>
+                                    <TextBlock Text="{Binding SelectedLocalCount}" FontSize="14"/>
+                                    <TextBlock Text=")" FontSize="14"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
@@ -108,11 +108,11 @@
                     <ItemsControl ItemsSource="{Binding LocalFolderGroups}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:LocalFolderGroup}">
-                                <Border Margin="0,0,0,6">
+                                <Border Margin="0,0,0,8">
                                     <StackPanel>
                                         <!-- Folder Row Header -->
                                         <Border Background="#1a1a1a" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="1" 
-                                                CornerRadius="5" Padding="8,6" Cursor="Hand">
+                                                CornerRadius="6" Padding="10,8" Cursor="Hand">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto"/>
@@ -125,33 +125,33 @@
                                                 <!-- Toggle Arrow -->
                                                 <Button Grid.Column="0" Command="{Binding ToggleExpandCommand}"
                                                         Background="Transparent" BorderThickness="0" Foreground="{StaticResource BrushTextSecondary}"
-                                                        Padding="4,0" Margin="0,0,6,0" FontSize="10" Content="{Binding ExpandIcon}"/>
+                                                        Padding="4,0" Margin="0,0,8,0" FontSize="13" Content="{Binding ExpandIcon}"/>
 
                                                 <!-- Select Folder Checkbox -->
-                                                <CheckBox Grid.Column="1" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <CheckBox Grid.Column="1" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
                                                 <!-- Folder Icon & Name -->
-                                                <TextBlock Grid.Column="2" Text="📁 " FontSize="12" Foreground="#f59e0b" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold">
+                                                <TextBlock Grid.Column="2" Text="📁 " FontSize="16" Foreground="#f59e0b" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="16" FontWeight="SemiBold">
                                                     <Run Text="{Binding Name, Mode=OneWay}"/>
-                                                    <Run Text=" [" Foreground="{StaticResource BrushTextMuted}" FontSize="11"/>
-                                                    <Run Text="{Binding TrackCount, Mode=OneWay}" Foreground="{StaticResource BrushPrimaryOrange}" FontSize="11"/>
-                                                    <Run Text="]" Foreground="{StaticResource BrushTextMuted}" FontSize="11"/>
+                                                    <Run Text=" [" Foreground="{StaticResource BrushTextMuted}" FontSize="14"/>
+                                                    <Run Text="{Binding TrackCount, Mode=OneWay}" Foreground="{StaticResource BrushPrimaryOrange}" FontSize="14"/>
+                                                    <Run Text="]" Foreground="{StaticResource BrushTextMuted}" FontSize="14"/>
                                                 </TextBlock>
 
                                                 <!-- Hint -->
-                                                <TextBlock Grid.Column="4" Text="{Binding ExpandTooltip}" FontSize="10" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                <TextBlock Grid.Column="4" Text="{Binding ExpandTooltip}" FontSize="13" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                             </Grid>
                                         </Border>
 
                                         <!-- Songs Inside Folder (Collapsed when IsExpanded = false) -->
-                                        <Border BorderBrush="#262626" BorderThickness="1,0,0,0" Margin="14,2,0,4" Padding="8,2,0,0"
+                                        <Border BorderBrush="#262626" BorderThickness="1,0,0,0" Margin="16,3,0,6" Padding="10,3,0,0"
                                                 Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
                                             <ItemsControl ItemsSource="{Binding Tracks}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate DataType="{x:Type models:Track}">
                                                         <Border Background="#121212" BorderBrush="#1f1f1f" BorderThickness="1"
-                                                                CornerRadius="4" Margin="0,0,0,3" Padding="8,5">
+                                                                CornerRadius="5" Margin="0,0,0,4" Padding="10,7">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="Auto"/>
@@ -164,26 +164,26 @@
                                                                 </Grid.ColumnDefinitions>
 
                                                                 <!-- Checkbox -->
-                                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,8,0"/>
 
                                                                 <!-- Music note icon -->
-                                                                <TextBlock Grid.Column="1" Text="🎵" FontSize="11" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                                <TextBlock Grid.Column="1" Text="🎵" FontSize="15" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
 
                                                                 <!-- Play / Preview Button -->
-                                                                <Button Grid.Column="2" Style="{StaticResource FlatButton}" Padding="5,2" Margin="0,0,8,0"
+                                                                <Button Grid.Column="2" Style="{StaticResource FlatButton}" Padding="6,3" Margin="0,0,10,0"
                                                                         Command="{Binding DataContext.PlayTrackCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                         CommandParameter="{Binding}" ToolTip="試聽歌曲">
-                                                                    <TextBlock Text="▶" FontSize="9" Foreground="{StaticResource BrushPrimaryOrange}"/>
+                                                                    <TextBlock Text="▶" FontSize="12" Foreground="{StaticResource BrushPrimaryOrange}"/>
                                                                 </Button>
 
                                                                 <!-- Title and Artist -->
                                                                 <StackPanel Grid.Column="3" VerticalAlignment="Center" Orientation="Horizontal">
-                                                                    <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
-                                                                    <TextBlock Text="{Binding Artist, StringFormat='{} - {0}'}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="6,0,0,0" TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Medium" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Text="{Binding Artist, StringFormat='{} - {0}'}" FontSize="14" Foreground="{StaticResource BrushTextMuted}" Margin="8,0,0,0" TextTrimming="CharacterEllipsis"/>
                                                                 </StackPanel>
 
                                                                 <!-- Status Badge (手錶已存 / 未同步) -->
-                                                                <Border Grid.Column="4" CornerRadius="4" Padding="6,2" Margin="8,0" VerticalAlignment="Center">
+                                                                <Border Grid.Column="4" CornerRadius="4" Padding="8,3" Margin="10,0" VerticalAlignment="Center">
                                                                     <Border.Style>
                                                                         <Style TargetType="Border">
                                                                             <Setter Property="Background" Value="#171717"/>
@@ -197,7 +197,7 @@
                                                                             </Style.Triggers>
                                                                         </Style>
                                                                     </Border.Style>
-                                                                    <TextBlock FontSize="10">
+                                                                    <TextBlock FontSize="13">
                                                                         <TextBlock.Style>
                                                                             <Style TargetType="TextBlock">
                                                                                 <Setter Property="Text" Value="未同步"/>
@@ -215,18 +215,18 @@
                                                                 </Border>
 
                                                                 <!-- File Size -->
-                                                                <TextBlock Grid.Column="5" Text="{Binding SizeFormatted}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" 
-                                                                           VerticalAlignment="Center" Margin="0,0,10,0" Width="60" TextAlignment="Right"/>
+                                                                <TextBlock Grid.Column="5" Text="{Binding SizeFormatted}" FontSize="14" Foreground="{StaticResource BrushTextMuted}" 
+                                                                           VerticalAlignment="Center" Margin="0,0,12,0" Width="75" TextAlignment="Right"/>
 
                                                                 <!-- Actions: ✎ 改名 | ➔ 複製 | 🗑 刪除 -->
                                                                 <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
-                                                                    <Button Style="{StaticResource FlatButton}" Content="✎ 改名" Padding="6,2" FontSize="10" Margin="0,0,4,0"
+                                                                    <Button Style="{StaticResource FlatButton}" Content="✎ 改名" Padding="8,3" FontSize="13" Margin="0,0,5,0"
                                                                             Command="{Binding DataContext.RenameTrackCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                             CommandParameter="{Binding}"/>
-                                                                    <Button Style="{StaticResource FlatButton}" Content="➔ 複製" Padding="6,2" FontSize="10" Margin="0,0,4,0"
+                                                                    <Button Style="{StaticResource FlatButton}" Content="➔ 複製" Padding="8,3" FontSize="13" Margin="0,0,5,0"
                                                                             Command="{Binding DataContext.CopySingleTrackCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                             CommandParameter="{Binding}" ToolTip="單曲複製到手錶"/>
-                                                                    <Button Style="{StaticResource FlatButton}" Content="🗑 刪除" Padding="6,2" FontSize="10" Foreground="{StaticResource BrushDanger}"
+                                                                    <Button Style="{StaticResource FlatButton}" Content="🗑 刪除" Padding="8,3" FontSize="13" Foreground="{StaticResource BrushDanger}"
                                                                             Command="{Binding DataContext.DeleteTrackCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                             CommandParameter="{Binding}"/>
                                                                 </StackPanel>
@@ -250,7 +250,7 @@
 
         <!-- ==================== BOTTOM PANE: GARMIN WATCH MUSIC LIBRARY ==================== -->
         <Border Grid.Row="2" Background="{StaticResource BrushCardBg}" BorderBrush="{StaticResource BrushCardBorder}" 
-                BorderThickness="1" CornerRadius="8" Padding="14">
+                BorderThickness="1" CornerRadius="8" Padding="16">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -259,7 +259,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- 1. Watch Header Toolbar -->
-                <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid Grid.Row="0" Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -267,30 +267,30 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="⌚ Garmin 手錶音樂庫" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        <Border Background="#262626" CornerRadius="10" Padding="8,2" Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding TotalFilteredWatchCount, StringFormat='{}{0} 首'}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"/>
+                        <TextBlock Text="⌚ Garmin 手錶音樂庫" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Border Background="#262626" CornerRadius="12" Padding="10,3" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding TotalFilteredWatchCount, StringFormat='{}{0} 首'}" FontSize="14" Foreground="{StaticResource BrushTextSecondary}"/>
                         </Border>
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- Folder Filter Dropdown -->
                         <ComboBox ItemsSource="{Binding WatchFilterFolders}" SelectedItem="{Binding WatchFolderFilter}"
-                                  Width="130" Height="30" Margin="0,0,8,0" VerticalContentAlignment="Center"/>
+                                  Width="150" Height="36" Margin="0,0,8,0" VerticalContentAlignment="Center" FontSize="15"/>
 
                         <!-- Search Box -->
                         <TextBox Text="{Binding WatchSearchText, UpdateSourceTrigger=PropertyChanged}" 
-                                 Width="160" Height="30" Margin="0,0,8,0" VerticalContentAlignment="Center"
-                                 Padding="8,4" FontSize="12"/>
+                                 Width="180" Height="36" Margin="0,0,8,0" VerticalContentAlignment="Center"
+                                 Padding="8,4" FontSize="15"/>
 
                         <!-- Refresh Button -->
-                        <Button Style="{StaticResource FlatButton}" Content="🔄" Padding="8,4"
+                        <Button Style="{StaticResource FlatButton}" Content="🔄" Padding="10,5" FontSize="15"
                                 Command="{Binding RefreshWatchCommand}" ToolTip="重新整理手錶清單"/>
                     </StackPanel>
                 </Grid>
 
                 <!-- 2. Select-all and Batch Operation Bar -->
-                <Border Grid.Row="1" Background="#111111" CornerRadius="4" Padding="8,6" Margin="0,0,0,8">
+                <Border Grid.Row="1" Background="#111111" CornerRadius="6" Padding="10,8" Margin="0,0,0,10">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -299,21 +299,21 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <CheckBox IsChecked="{Binding IsSelectAllWatch}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding SelectedWatchCount, StringFormat='{}全選 ({0}/'}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding TotalFilteredWatchCount, StringFormat='{}{0})'}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                            <CheckBox IsChecked="{Binding IsSelectAllWatch}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding SelectedWatchCount, StringFormat='{}全選 ({0}/'}" FontSize="15" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding TotalFilteredWatchCount, StringFormat='{}{0})'}" FontSize="15" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
 
-                            <TextBlock Text="  |  手錶播放清單 (.m3u8) 支援" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="  |  手錶播放清單 (.m3u8) 支援" FontSize="14" Foreground="{StaticResource BrushTextMuted}" Margin="12,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
 
                         <!-- Batch Remove Button -->
-                        <Button Grid.Column="2" Style="{StaticResource FlatButton}" Padding="8,3" FontSize="11" Foreground="{StaticResource BrushDanger}"
+                        <Button Grid.Column="2" Style="{StaticResource FlatButton}" Padding="10,4" FontSize="14" Foreground="{StaticResource BrushDanger}"
                                 Command="{Binding DeleteSelectedWatchCommand}"
                                 Visibility="{Binding HasSelectedWatch, Converter={StaticResource BoolToVis}}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🗑 從手錶移除 (" FontSize="11"/>
-                                <TextBlock Text="{Binding SelectedWatchCount}" FontSize="11"/>
-                                <TextBlock Text=")" FontSize="11"/>
+                                <TextBlock Text="🗑 從手錶移除 (" FontSize="14"/>
+                                <TextBlock Text="{Binding SelectedWatchCount}" FontSize="14"/>
+                                <TextBlock Text=")" FontSize="14"/>
                             </StackPanel>
                         </Button>
                     </Grid>
@@ -324,11 +324,11 @@
                     <ItemsControl ItemsSource="{Binding WatchFolderGroups}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:WatchFolderGroup}">
-                                <Border Margin="0,0,0,6">
+                                <Border Margin="0,0,0,8">
                                     <StackPanel>
                                         <!-- Folder Row Header -->
                                         <Border Background="#1a1a1a" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="1" 
-                                                CornerRadius="5" Padding="8,6" Cursor="Hand">
+                                                CornerRadius="6" Padding="10,8" Cursor="Hand">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto"/>
@@ -341,33 +341,33 @@
                                                 <!-- Toggle Arrow -->
                                                 <Button Grid.Column="0" Command="{Binding ToggleExpandCommand}"
                                                         Background="Transparent" BorderThickness="0" Foreground="{StaticResource BrushTextSecondary}"
-                                                        Padding="4,0" Margin="0,0,6,0" FontSize="10" Content="{Binding ExpandIcon}"/>
+                                                        Padding="4,0" Margin="0,0,8,0" FontSize="13" Content="{Binding ExpandIcon}"/>
 
                                                 <!-- Select Folder Checkbox -->
-                                                <CheckBox Grid.Column="1" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <CheckBox Grid.Column="1" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
                                                 <!-- Folder Icon & Name -->
-                                                <TextBlock Grid.Column="2" Text="📁 " FontSize="12" Foreground="#f59e0b" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold">
+                                                <TextBlock Grid.Column="2" Text="📁 " FontSize="16" Foreground="#f59e0b" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="16" FontWeight="SemiBold">
                                                     <Run Text="{Binding Name, Mode=OneWay}"/>
-                                                    <Run Text=" [" Foreground="{StaticResource BrushTextMuted}" FontSize="11"/>
-                                                    <Run Text="{Binding TrackCount, Mode=OneWay}" Foreground="{StaticResource BrushPrimaryOrange}" FontSize="11"/>
-                                                    <Run Text="]" Foreground="{StaticResource BrushTextMuted}" FontSize="11"/>
+                                                    <Run Text=" [" Foreground="{StaticResource BrushTextMuted}" FontSize="14"/>
+                                                    <Run Text="{Binding TrackCount, Mode=OneWay}" Foreground="{StaticResource BrushPrimaryOrange}" FontSize="14"/>
+                                                    <Run Text="]" Foreground="{StaticResource BrushTextMuted}" FontSize="14"/>
                                                 </TextBlock>
 
                                                 <!-- Hint -->
-                                                <TextBlock Grid.Column="4" Text="{Binding ExpandTooltip}" FontSize="10" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                <TextBlock Grid.Column="4" Text="{Binding ExpandTooltip}" FontSize="13" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                             </Grid>
                                         </Border>
 
                                         <!-- Songs Inside Folder -->
-                                        <Border BorderBrush="#262626" BorderThickness="1,0,0,0" Margin="14,2,0,4" Padding="8,2,0,0"
+                                        <Border BorderBrush="#262626" BorderThickness="1,0,0,0" Margin="16,3,0,6" Padding="10,3,0,0"
                                                 Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
                                             <ItemsControl ItemsSource="{Binding Tracks}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate DataType="{x:Type models:WatchTrack}">
                                                         <Border Background="#121212" BorderBrush="#1f1f1f" BorderThickness="1"
-                                                                CornerRadius="4" Margin="0,0,0,3" Padding="8,5">
+                                                                CornerRadius="5" Margin="0,0,0,4" Padding="10,7">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="Auto"/>
@@ -377,18 +377,18 @@
                                                                     <ColumnDefinition Width="Auto"/>
                                                                 </Grid.ColumnDefinitions>
 
-                                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                                <TextBlock Grid.Column="1" Text="🎵" FontSize="11" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                                <TextBlock Grid.Column="1" Text="🎵" FontSize="15" Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
 
                                                                 <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
-                                                                    <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
-                                                                    <TextBlock Text="{Binding Artist, StringFormat='{} - {0}'}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" Margin="6,0,0,0" TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Medium" Foreground="{StaticResource BrushTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Text="{Binding Artist, StringFormat='{} - {0}'}" FontSize="14" Foreground="{StaticResource BrushTextMuted}" Margin="8,0,0,0" TextTrimming="CharacterEllipsis"/>
                                                                 </StackPanel>
 
-                                                                <TextBlock Grid.Column="3" Text="{Binding SizeFormatted}" FontSize="11" Foreground="{StaticResource BrushTextMuted}" 
-                                                                           VerticalAlignment="Center" Margin="0,0,10,0" Width="60" TextAlignment="Right"/>
+                                                                <TextBlock Grid.Column="3" Text="{Binding SizeFormatted}" FontSize="14" Foreground="{StaticResource BrushTextMuted}" 
+                                                                           VerticalAlignment="Center" Margin="0,0,12,0" Width="75" TextAlignment="Right"/>
 
-                                                                <Button Grid.Column="4" Style="{StaticResource FlatButton}" Content="🗑 從手錶移除" Padding="6,2" FontSize="10" Foreground="{StaticResource BrushDanger}"
+                                                                <Button Grid.Column="4" Style="{StaticResource FlatButton}" Content="🗑 從手錶移除" Padding="8,3" FontSize="13" Foreground="{StaticResource BrushDanger}"
                                                                         Command="{Binding DataContext.DeleteWatchTrackCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                         CommandParameter="{Binding}"/>
                                                             </Grid>
@@ -407,7 +407,7 @@
         </Border>
 
         <!-- ==================== BOTTOM SYNC ACTION BAR ==================== -->
-        <Border Grid.Row="3" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,8,0,0">
+        <Border Grid.Row="3" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="0,1,0,0" Padding="0,12,0,0" Margin="0,10,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -417,12 +417,12 @@
 
                 <!-- Status text -->
                 <TextBlock Grid.Column="0" Text="{Binding SyncStatusText}" Foreground="{StaticResource BrushPrimaryOrange}" 
-                           FontSize="12" VerticalAlignment="Center" FontWeight="Medium"/>
+                           FontSize="16" VerticalAlignment="Center" FontWeight="Medium"/>
 
-                <Button Grid.Column="1" Style="{StaticResource FlatButton}" Content="建立播放清單" Margin="0,0,10,0" Padding="14,7"
+                <Button Grid.Column="1" Style="{StaticResource FlatButton}" Content="建立播放清單" Margin="0,0,12,0" Padding="16,8" FontSize="16"
                         Command="{Binding CreatePlaylistCommand}"/>
 
-                <Button Grid.Column="2" Style="{StaticResource OrangeButton}" Content="一鍵同步勾選歌曲至手錶" Padding="18,7"
+                <Button Grid.Column="2" Style="{StaticResource OrangeButton}" Content="一鍵同步勾選歌曲至手錶" Padding="22,8" FontSize="16"
                         Command="{Binding SyncSelectedCommand}"/>
             </Grid>
         </Border>

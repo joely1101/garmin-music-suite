@@ -4,45 +4,45 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" 
-             d:DesignHeight="750" d:DesignWidth="900">
+             d:DesignHeight="780" d:DesignWidth="960">
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="0,0,10,0">
 
             <!-- SECTION 1: WATCH DIRECTORY & MTP DEVICE SETTINGS -->
             <Border Background="{StaticResource BrushCardBg}" BorderBrush="{StaticResource BrushCardBorder}" 
-                    BorderThickness="1" CornerRadius="8" Padding="20" Margin="0,0,0,16">
+                    BorderThickness="1" CornerRadius="8" Padding="24" Margin="0,0,0,18">
                 <StackPanel>
-                    <Grid Margin="0,0,0,12">
+                    <Grid Margin="0,0,0,14">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="手錶路徑與 MTP 裝置設定" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock Text="手錶路徑與 MTP 裝置設定" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,6"/>
                             <TextBlock Text="支援 Garmin MTP 智慧手錶 (如 Forerunner 255/265/965、Fēnix 系列) 以及 USB 隨身碟模式。" 
-                                       FontSize="12" Foreground="{StaticResource BrushTextSecondary}"/>
+                                       FontSize="15" Foreground="{StaticResource BrushTextSecondary}"/>
                         </StackPanel>
 
                         <Button Grid.Column="1" Style="{StaticResource FlatButton}" 
-                                Command="{Binding RefreshDevicesCommand}" Height="32" Padding="12,0">
+                                Command="{Binding RefreshDevicesCommand}" Height="38" Padding="14,0" FontSize="15">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⟳" FontSize="14" FontWeight="Bold" Margin="0,0,6,0"/>
-                                <TextBlock Text="重新整理裝置清單" FontSize="12"/>
+                                <TextBlock Text="⟳" FontSize="16" FontWeight="Bold" Margin="0,0,8,0"/>
+                                <TextBlock Text="重新整理裝置清單" FontSize="15"/>
                             </StackPanel>
                         </Button>
                     </Grid>
 
                     <!-- DETECTED DEVICES LIST -->
-                    <TextBlock Text="系統偵測到的裝置：" FontSize="13" FontWeight="SemiBold" 
-                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+                    <TextBlock Text="系統偵測到的裝置：" FontSize="17" FontWeight="SemiBold" 
+                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
 
                     <ItemsControl ItemsSource="{Binding AvailableDevices}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="#1e1e1e" BorderBrush="{StaticResource BrushCardBorder}" 
-                                        BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                        BorderThickness="1" CornerRadius="6" Padding="16" Margin="0,0,0,10">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -51,34 +51,34 @@
                                         </Grid.ColumnDefinitions>
 
                                         <!-- Device Icon -->
-                                        <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" 
+                                        <Border Grid.Column="0" Width="46" Height="46" CornerRadius="23" 
                                                 Background="#262626" BorderBrush="#3f3f46" BorderThickness="1"
-                                                VerticalAlignment="Center" Margin="0,0,12,0">
-                                            <TextBlock Text="⌚" FontSize="18" Foreground="{StaticResource BrushPrimaryOrange}" 
+                                                VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <TextBlock Text="⌚" FontSize="22" Foreground="{StaticResource BrushPrimaryOrange}" 
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
 
                                         <!-- Device Info -->
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" 
-                                                           Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,8,0"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold" 
+                                                           Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,10,0"/>
                                                 
                                                 <Border Background="#14532d" BorderBrush="#22c55e" BorderThickness="1" 
-                                                        CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding DeviceType}" FontSize="10" FontWeight="SemiBold" Foreground="#86efac"/>
+                                                        CornerRadius="4" Padding="8,2" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DeviceType}" FontSize="13" FontWeight="SemiBold" Foreground="#86efac"/>
                                                 </Border>
                                             </StackPanel>
 
-                                            <TextBlock Text="{Binding Path}" FontSize="11" FontFamily="Consolas, Segoe UI" 
-                                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,3"/>
+                                            <TextBlock Text="{Binding Path}" FontSize="14" FontFamily="Consolas, Segoe UI" 
+                                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
                                             
-                                            <TextBlock Text="{Binding StorageInfo}" FontSize="11" 
+                                            <TextBlock Text="{Binding StorageInfo}" FontSize="14" 
                                                        Foreground="{StaticResource BrushPrimaryOrange}"/>
                                         </StackPanel>
 
                                         <!-- Apply / Selected Button -->
-                                        <Button Grid.Column="2" VerticalAlignment="Center" Height="32" Padding="14,0"
+                                        <Button Grid.Column="2" VerticalAlignment="Center" Height="38" Padding="18,0" FontSize="15"
                                                 Command="{Binding DataContext.SelectDeviceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}">
                                             <Button.Style>
@@ -103,7 +103,7 @@
 
                     <!-- Empty state if no devices -->
                     <Border Background="#171717" BorderBrush="{StaticResource BrushCardBorder}" BorderThickness="1" CornerRadius="6" 
-                            Padding="16" Margin="0,0,0,8">
+                            Padding="20" Margin="0,0,0,10">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -116,55 +116,55 @@
                         </Border.Style>
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="未偵測到任何連線手錶" FontWeight="SemiBold" HorizontalAlignment="Center" 
-                                       Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,4"/>
+                                       FontSize="16" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
                             <TextBlock Text="請以 USB 傳輸線將手錶連接至電腦，並確保手錶已解鎖解除休眠。" 
-                                       FontSize="11" Foreground="#737373" HorizontalAlignment="Center"/>
+                                       FontSize="14" Foreground="#737373" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <!-- TIP BOX -->
-                    <Border Background="#1c1917" BorderBrush="#78350f" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,8,0,16">
+                    <Border Background="#1c1917" BorderBrush="#78350f" BorderThickness="1" CornerRadius="6" Padding="14" Margin="0,10,0,18">
                         <TextBlock Text="💡 提示：Garmin MTP 手錶 (如 Forerunner 255S Music) 為 Windows 專用 Shell 物件，Windows 傳統檔案總管的「瀏覽資料夾」對話框無法選取。請直接點擊上方清單中的「選取此手錶」即可立即切換！" 
-                                   FontSize="11" Foreground="#fb923c" TextWrapping="Wrap" LineHeight="16"/>
+                                   FontSize="14" Foreground="#fb923c" TextWrapping="Wrap" LineHeight="20"/>
                     </Border>
 
                     <!-- MANUAL PATH INPUT -->
-                    <TextBlock Text="目前生效路徑 / 自訂手動輸入：" FontSize="13" FontWeight="SemiBold" 
-                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,8"/>
+                    <TextBlock Text="目前生效路徑 / 自訂手動輸入：" FontSize="17" FontWeight="SemiBold" 
+                               Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,10"/>
 
-                    <Grid Margin="0,0,0,4">
+                    <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBox Text="{Binding CustomWatchPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="36" 
-                                 VerticalContentAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox Text="{Binding CustomWatchPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="42" 
+                                 VerticalContentAlignment="Center" Margin="0,0,12,0" FontSize="16"/>
 
                         <Button Grid.Column="1" Style="{StaticResource FlatButton}" Content="瀏覽資料夾... (限磁碟機)" 
-                                Command="{Binding BrowseWatchPathCommand}" Margin="0,0,8,0" Height="36" Padding="14,0"/>
+                                Command="{Binding BrowseWatchPathCommand}" Margin="0,0,10,0" Height="42" Padding="16,0" FontSize="15"/>
 
                         <Button Grid.Column="2" Style="{StaticResource FlatButton}" Content="恢復自動偵測" 
-                                Command="{Binding ClearWatchPathCommand}" Height="36" Padding="14,0"/>
+                                Command="{Binding ClearWatchPathCommand}" Height="42" Padding="16,0" FontSize="15"/>
                     </Grid>
                 </StackPanel>
             </Border>
 
             <!-- SECTION 2: SUBSONIC GARMIN SERVER (WIFI SYNC) -->
             <Border Background="{StaticResource BrushCardBg}" BorderBrush="{StaticResource BrushCardBorder}" 
-                    BorderThickness="1" CornerRadius="8" Padding="20">
+                    BorderThickness="1" CornerRadius="8" Padding="24">
                 <StackPanel>
-                    <Grid Margin="0,0,0,6">
+                    <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="Garmin Subsonic 無線伺服器 (WiFi 同步)" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock Text="Garmin Subsonic 無線伺服器 (WiFi 同步)" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
 
                         <Button Grid.Column="1" 
-                                Command="{Binding ToggleServerCommand}">
+                                Command="{Binding ToggleServerCommand}" Height="38" Padding="16,0" FontSize="15">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource FlatButton}">
                                     <Setter Property="Content" Value="啟動伺服器"/>
@@ -180,11 +180,11 @@
                     </Grid>
 
                     <TextBlock Text="相容 Garmin 手錶 SubMusic App 等 Subsonic 客戶端，讓手錶透過 WiFi 直接串流與離線下載音樂。" 
-                               FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,16"/>
+                               FontSize="15" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,18"/>
 
-                    <Grid Margin="0,0,0,16">
+                    <Grid Margin="0,0,0,18">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="180"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
@@ -194,9 +194,9 @@
                         </Grid.RowDefinitions>
 
                         <!-- Server Status -->
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="服務運行狀態" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"/>
-                        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,10">
-                            <Ellipse Width="8" Height="8" Margin="0,0,6,0">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="服務運行狀態" FontSize="15" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,12"/>
+                        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,12">
+                            <Ellipse Width="10" Height="10" Margin="0,0,8,0">
                                 <Ellipse.Style>
                                     <Style TargetType="Ellipse">
                                         <Setter Property="Fill" Value="{StaticResource BrushDanger}"/>
@@ -208,7 +208,7 @@
                                     </Style>
                                 </Ellipse.Style>
                             </Ellipse>
-                            <TextBlock FontSize="12" FontWeight="SemiBold">
+                            <TextBlock FontSize="15" FontWeight="SemiBold">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Text" Value="已停止"/>
@@ -225,14 +225,14 @@
                         </StackPanel>
 
                         <!-- Local IP & Port -->
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="本機連線位址" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,10"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SubsonicUrl}" FontSize="13" FontWeight="SemiBold" 
-                                   Foreground="{StaticResource BrushPrimaryOrange}" Margin="0,0,0,10"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="本機連線位址" FontSize="15" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,12"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SubsonicUrl}" FontSize="16" FontWeight="SemiBold" 
+                                   Foreground="{StaticResource BrushPrimaryOrange}" Margin="0,0,0,12"/>
 
                         <!-- Watch Config Instructions -->
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="手錶設定教學" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="手錶設定教學" FontSize="15" Foreground="{StaticResource BrushTextSecondary}"/>
                         <TextBlock Grid.Row="2" Grid.Column="1" Text="在手錶 SubMusic App 中新增伺服器，網址填入上述本機位址，使用者名稱填 admin，密碼填 admin 即可完成連線同步。" 
-                                   FontSize="12" Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap"/>
+                                   FontSize="15" Foreground="{StaticResource BrushTextPrimary}" TextWrapping="Wrap" LineHeight="22"/>
                     </Grid>
                 </StackPanel>
             </Border>
