@@ -34,8 +34,20 @@ public class MainViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsYouTubeTab));
                 OnPropertyChanged(nameof(IsPodcastTab));
                 OnPropertyChanged(nameof(IsSettingsTab));
+
+                if (value == 0)
+                {
+                    _ = RefreshLocalMusicAsync();
+                }
             }
         }
+    }
+
+    public async Task RefreshLocalMusicAsync()
+    {
+        await DatabaseService.Instance.ScanAndSyncFilesAsync();
+        await RefreshFoldersAsync();
+        await WatchSyncVM.LoadLocalTracksAsync();
     }
 
     public bool IsWatchSyncTab => SelectedTabIndex == 0;
@@ -89,6 +101,23 @@ public class MainViewModel : ViewModelBase
         RefreshWatchCommand = new AsyncRelayCommand(RefreshWatchStatusAsync);
         AddFolderCommand = new RelayCommand(PromptAddFolder);
 
+        // Auto refresh when downloads complete
+        PodcastService.Instance.OnDownloadCompleted += () =>
+        {
+            App.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                await RefreshLocalMusicAsync();
+            });
+        };
+
+        YouTubeDownloadService.Instance.OnDownloadCompleted += () =>
+        {
+            App.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                await RefreshLocalMusicAsync();
+            });
+        };
+
         // Initial setup
         _ = InitializeAsync();
     }
@@ -129,6 +158,7 @@ public class MainViewModel : ViewModelBase
         IsRefreshingWatch = true;
         try
         {
+            await RefreshLocalMusicAsync();
             Watch = await MtpService.Instance.DetectWatchAsync();
             await WatchSyncVM.LoadWatchTracksAsync(Watch);
         }

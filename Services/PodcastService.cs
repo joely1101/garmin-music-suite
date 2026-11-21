@@ -20,6 +20,8 @@ public class PodcastService
     private static readonly Lazy<PodcastService> _instance = new(() => new PodcastService());
     public static PodcastService Instance => _instance.Value;
 
+    public event Action? OnDownloadCompleted;
+
     public ObservableCollection<DownloadTask> Tasks { get; } = new();
 
     private readonly HttpClient _http;
@@ -299,6 +301,7 @@ public class PodcastService
             episode.StatusText = "已完成";
 
             await DatabaseService.Instance.ScanAndSyncFilesAsync();
+            OnDownloadCompleted?.Invoke();
         }
         catch (OperationCanceledException)
         {

@@ -59,6 +59,10 @@ public class LocalFolderGroup : ViewModelBase
     {
         Name = name;
         ToggleExpandCommand = new RelayCommand(() => IsExpanded = !IsExpanded);
+        Tracks.CollectionChanged += (s, e) =>
+        {
+            OnPropertyChanged(nameof(TrackCount));
+        };
     }
 }
 
@@ -116,5 +120,9 @@ public class WatchFolderGroup : ViewModelBase
     {
         Name = name;
         ToggleExpandCommand = new RelayCommand(() => IsExpanded = !IsExpanded);
+        Tracks.CollectionChanged += (s, e) =>
+        {
+            OnPropertyChanged(nameof(TrackCount));
+        };
     }
 }

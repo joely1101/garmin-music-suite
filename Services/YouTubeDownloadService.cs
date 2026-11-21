@@ -14,6 +14,8 @@ public class YouTubeDownloadService
     private static readonly Lazy<YouTubeDownloadService> _instance = new(() => new YouTubeDownloadService());
     public static YouTubeDownloadService Instance => _instance.Value;
 
+    public event Action? OnDownloadCompleted;
+
     public ObservableCollection<DownloadTask> Tasks { get; } = new();
 
     private readonly string _ytDlpPath;
@@ -177,7 +179,7 @@ public class YouTubeDownloadService
             {
                 task.Status = "completed";
                 task.Progress = "下載與轉碼完成";
-                _ = DatabaseService.Instance.ScanAndSyncFilesAsync();
+                _ = DatabaseService.Instance.ScanAndSyncFilesAsync().ContinueWith(_ => OnDownloadCompleted?.Invoke());
             }
             else
             {
